@@ -1,0 +1,16 @@
+{
+  "scenario_id": "scenario_4_apexlogistics_followup",
+  "customer_name": "ApexLogistics",
+  "raw_text": "CRM Follow-up Note - June 27, 2026:\nAccount: ApexLogistics. CSM: Sarah Jenkins.\nFollowing up on last week's retention call. Marcus Vance confirmed that the API latency issue (ticket #9932) was resolved by engineering on June 26. Active seat count has partially recovered — now at 61 out of 100. However, Marcus is still asking for a discount before he signs the renewal on July 15. He mentioned that LogiPulse offered them a 20% lower price point. The executive sponsor risk remains — no replacement VP of Operations has been confirmed yet. Contract value at risk: $45,000. Recommend a targeted retention offer before the renewal deadline.",
+  "ground_truth_assumptions": {
+    "contract_type": "Annual",
+    "churn_risk": "High",
+    "health_score": 52,
+    "segment": "Mid-Market",
+    "license_count": 100,
+    "active_users": 61,
+    "contract_value": 45000
+  },
+  "expected_confidence": "high",
+  "demo_note": "Run this AFTER scenario_1_churn to demonstrate the Memory Diff panel — the prior retention call decision will surface here."
+}

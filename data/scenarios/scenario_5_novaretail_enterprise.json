@@ -1,0 +1,16 @@
+{
+  "scenario_id": "scenario_5_novaretail_enterprise",
+  "customer_name": "NovaRetail Solutions",
+  "raw_text": "CRM Touchpoint Note - August 12, 2026:\nAccount: NovaRetail Solutions. CSM: David Collins.\nI had a quarterly business review with Emily Carter, Director of IT at NovaRetail Solutions. Emily expressed growing dissatisfaction with the platform following multiple outages during their peak sales season. Over the last six weeks, system uptime has fallen below their expected SLA, causing disruptions across several retail locations. She also noted that adoption of our analytics dashboard has dropped significantly, with only 54 active users out of 120 licensed seats.\nEmily mentioned that her team has begun evaluating RetailSync, as they believe it offers more reliable infrastructure and faster customer support. She was particularly frustrated that support ticket #10847, regarding intermittent data synchronization failures, has remained unresolved for 10 days despite multiple follow-ups.\nTheir three-year enterprise agreement expires on September 1, and she indicated that renewal is at risk unless we can provide a clear remediation plan, expedite the support issue, and discuss revised commercial terms to reflect the recent service disruptions.",
+  "ground_truth_assumptions": {
+    "contract_type": "Multi-year",
+    "churn_risk": "High",
+    "health_score": 28,
+    "segment": "Enterprise",
+    "license_count": 120,
+    "active_users": 54,
+    "contract_value": 180000
+  },
+  "expected_confidence": "high",
+  "demo_note": "High-value enterprise churn risk. SLA breach + competitor evaluation + renewal in 20 days. Should trigger 'Schedule retention call' with high priority due to large contract value."
+}

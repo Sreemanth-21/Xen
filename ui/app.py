@@ -296,7 +296,7 @@ def api_memory_diff(company_name: str) -> list:
 #  LOAD SCENARIOS FROM data/scenarios/*.json  (replaces hardcoded presets)
 # ─────────────────────────────────────────────────────────────────────────────
 _SCENARIO_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "scenarios")
-_SCENARIO_FILES = ["scenario_1_churn.json", "scenario_2_expansion.json", "scenario_3_ambiguous.json"]
+_SCENARIO_FILES = ["scenario_1_churn.json", "scenario_2_expansion.json", "scenario_3_ambiguous.json", "scenario_4_apexlogistics_followup.json", "scenario_5_novaretail_enterprise.json"]
 _RISK_ICONS = {"High": "🔴", "Low": "🟢", "Medium": "🟡"}
 
 def _load_scenarios() -> dict:
