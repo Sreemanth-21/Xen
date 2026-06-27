@@ -428,6 +428,9 @@ def parse_actual_route(plan_trace: list) -> list:
             seen.add("Explainability")
         if "execute" in lower or "hitl" in lower or "pausing" in lower:
             seen.add("HITL Gate")
+    # Reasoning always runs if we reach explainability
+    if "Explainability" in seen:
+        seen.add("Reasoning")
     # Preserve canonical order
     return [a for a in order if a in seen]
 
