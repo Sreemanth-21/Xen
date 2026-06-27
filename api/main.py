@@ -155,7 +155,7 @@ def memory_diff(company_name: str = Query(..., description="Company name to find
                 output.append({
                     "company_name":   meta.get("company_name", "—"),
                     "action":         meta.get("action", "—"),
-                    "human_decision": meta.get("human_decision", "—"),
+                    "human_decision": meta.get("decision", "—"),
                     "outcome":        meta.get("outcome", "—"),
                     "timestamp":      meta.get("timestamp", "—"),
                 })

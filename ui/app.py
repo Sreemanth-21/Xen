@@ -764,13 +764,19 @@ elif st.session_state.stage in ("review", "edited", "approved", "rejected"):
                             st.markdown(f"**{display}**")
                             st.caption(str(reason))
                             fl = field_name.lower()
-                            if "segment" in fl:
+                            if fl == "segment":
                                 edited_vals[field_name] = st.selectbox(display, ["Enterprise","Mid-Market","SMB"], key=f"ed_{field_name}", label_visibility="collapsed")
-                            elif "contract" in fl:
+                            elif fl == "contract_type":
                                 edited_vals[field_name] = st.selectbox(display, ["Annual","Monthly","Multi-year"], key=f"ed_{field_name}", label_visibility="collapsed")
-                            elif "churn" in fl:
+                            elif fl == "contract_value":
+                                try:
+                                    val = float(profile.get("contract_value", 0.0))
+                                except Exception:
+                                    val = 0.0
+                                edited_vals[field_name] = st.number_input(display, value=val, step=1000.0, key=f"ed_{field_name}", label_visibility="collapsed")
+                            elif fl == "churn_risk":
                                 edited_vals[field_name] = st.radio(display, ["High","Medium","Low"], horizontal=True, key=f"ed_{field_name}", label_visibility="collapsed")
-                            elif "health" in fl:
+                            elif fl == "health_score":
                                 edited_vals[field_name] = st.slider(display, 0, 100, int(profile.get("health_score", 50)), key=f"ed_{field_name}", label_visibility="collapsed")
                             else:
                                 edited_vals[field_name] = st.text_input(display, value=str(profile.get(field_name, "")), key=f"ed_{field_name}", label_visibility="collapsed")

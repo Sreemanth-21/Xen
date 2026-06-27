@@ -49,12 +49,14 @@ def memory_update_node(state: PulseState) -> dict[str, Any]:
 
     # 4. Prepare metadata and perform upsert using case_id as ID to overwrite duplicates
     metadata = {
-        "case_id":    case_id,
-        "action":     action,
-        "decision":   status,
-        "priority":   priority,
-        "confidence": confidence,
-        "timestamp":  datetime.now(timezone.utc).isoformat(),
+        "case_id":      case_id,
+        "company_name": company_name,
+        "action":       action,
+        "decision":     status,
+        "outcome":      "pending",
+        "priority":     priority,
+        "confidence":   confidence,
+        "timestamp":    datetime.now(timezone.utc).isoformat(),
     }
 
     print(f"Writing history record for case: {case_id}")
