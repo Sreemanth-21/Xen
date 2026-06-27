@@ -1,0 +1,15 @@
+{
+  "scenario_id": "scenario_3_ambiguous",
+  "customer_name": "NovaRetail",
+  "raw_text": "CRM Touchpoint Note - June 24, 2026:\nSpoke with Dave, the primary contact at NovaRetail. He mentioned that the company is undergoing some general belt-tightening and their marketing team of 20 users has stopped logging in entirely over the past few weeks (total active users down to 42 out of 80 seats). However, their sales team has been asking for integration with Salesforce, and Dave wanted to know if we could activate a trial for that feature. He remarked, 'The product is still really valuable for sales, even if marketing is pulling back.' Regarding billing, he asked, 'Are we still on the hook for the full period, or can we downgrade mid-way? Since we pay $3,000 month-to-month, I wasn't sure if we can cancel the marketing seats.' We need to check their agreement. Since they signed up last June, it has been running month-to-month, but we need to verify if there was a 12-month lock-in.",
+  "ground_truth_assumptions": {
+    "contract_type": "Monthly",
+    "churn_risk": "Medium",
+    "health_score": 55,
+    "segment": "Mid-Market",
+    "license_count": 80,
+    "active_users": 42,
+    "contract_value": 36000
+  },
+  "expected_confidence": "low"
+}

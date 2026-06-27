@@ -2,133 +2,143 @@ import os
 import math
 from datetime import datetime, timezone
 from typing import Any, List
+import chromadb
 from agents.graph import PulseState
-
-# Mock Database of Knowledge Base Playbooks/Articles
-MOCK_KB = [
-    {
-        "text": "Playbook: Seat Contraction and License Utilization Recovery. When license utilization falls below 70%, schedule an expansion review, offer free admin training, and align on customer goals. Value: High priority expansion/retention tactic.",
-        "source": "kb_seat_contraction_v2.md",
-        "timestamp": "2026-06-26T12:00:00Z"  # 1 day ago
-    },
-    {
-        "text": "Playbook: Churn Prevention for Payment Failures. If a customer experience credit card expiry or billing issues, notify billing contact, grant 14-day grace period, and send automated warning alerts.",
-        "source": "kb_billing_failure.md",
-        "timestamp": "2026-06-15T09:00:00Z"  # 12 days ago
-    },
-    {
-        "text": "Playbook: Annual Contract Renewal Guide. Engage enterprise customers 90 days before renewal. Present ROI dashboard, usage trends, and discuss multi-year expansion options.",
-        "source": "kb_enterprise_renewal.md",
-        "timestamp": "2026-03-01T10:00:00Z"  # ~118 days ago (old playbook)
-    },
-    {
-        "text": "Playbook: Inactive Admin/Key Sponsor Churn Rescue. When the main admin or executive sponsor leaves the company, immediately engage the executive buyer, identify new admin candidates, and conduct a new onboarding session.",
-        "source": "kb_sponsor_change.md",
-        "timestamp": "2026-06-25T15:30:00Z"  # 2 days ago
-    },
-    {
-        "text": "Playbook: High Churn Risk Mitigations. Implement executive check-ins, custom CSM support, and customer success reviews for high-risk accounts.",
-        "source": "kb_high_risk_remedy.md",
-        "timestamp": "2025-12-01T08:00:00Z"  # Over 200 days ago
-    }
-]
-
-def retrieve(query: str, top_k: int = 3) -> List[dict]:
-    """
-    Teammate B will replace this function with the actual interface to Chroma DB.
-    We stub it here with a keyword search over the mock database.
-    """
-    print(f"Retrieving from Chroma with query: '{query}' and top_k: {top_k}")
-    query_words = set(query.lower().split())
-    results = []
-    
-    for item in MOCK_KB:
-        text = item["text"].lower()
-        # Calculate a simple Jaccard-like overlap score for stub purposes
-        text_words = set(text.split())
-        overlap = len(query_words.intersection(text_words))
-        score = float(overlap) / float(max(len(query_words), 1))
-        
-        # Add basic base score plus mock similarity
-        base_score = 0.3 + (score * 0.7)
-        results.append({
-            "text": item["text"],
-            "source": item["source"],
-            "score": base_score,
-            "timestamp": item["timestamp"]
-        })
-        
-    # Sort by initial similarity score
-    results = sorted(results, key=lambda x: x["score"], reverse=True)
-    return results[:top_k]
 
 def retrieval_node(state: PulseState) -> dict[str, Any]:
     print("--- RUNNING KNOWLEDGE RETRIEVAL AGENT ---")
-    raw_input = state.get("raw_input", "")
-    customer_profile = state.get("customer_profile", {})
-    plan_trace = state.get("plan_trace", [])
     
-    # Check if we received a broadening signal from the planner
-    has_broaden_signal = False
-    if plan_trace:
-        last_log = plan_trace[-1]
-        if "broadening retrieval query" in last_log.lower():
-            has_broaden_signal = True
-            
-    # Formulate search query
-    if has_broaden_signal:
-        # A broader query to get general churn and expansion policies
-        search_query = "customer success playbooks retention expansion churn contraction renewal"
-        top_k = 4
-    else:
-        # Generate targeted query from raw input and customer profile
-        company = customer_profile.get("company_name", "")
-        churn_risk = customer_profile.get("churn_risk", "Medium")
-        # Extract keywords or issues from raw input
-        search_query = f"{churn_risk} churn risk {raw_input[:100]}"
-        top_k = 3
+    # 1. Read customer profile from state
+    profile = state.get("customer_profile", {})
+    company_name = profile.get("company_name", "Unknown Company")
+    churn_risk = profile.get("churn_risk", "Medium")
+    segment = profile.get("segment", "Mid-Market")
+    contract_type = profile.get("contract_type", "Annual")
+    
+    # 2. Build query string
+    query_str = f"{segment} customer, {churn_risk} churn risk, {contract_type} contract"
+    print(f"Retrieving from Chroma with query: '{query_str}'")
+    
+    # 3. Resolve absolute path to Chroma DB store
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    workspace_root = os.path.dirname(script_dir)
+    chroma_db_path = os.path.join(workspace_root, "chroma_store")
+    
+    retrieved_docs = []
+    
+    try:
+        client = chromadb.PersistentClient(path=chroma_db_path)
         
-    # Call the retrieval interface
-    raw_results = retrieve(search_query, top_k=top_k)
+        # Check collections to avoid errors if database is not set up
+        collections = client.list_collections()
+        col_names = [col.name for col in collections]
+        
+        if "knowledge_base" not in col_names:
+            print("Warning: 'knowledge_base' collection does not exist in Chroma DB.")
+        else:
+            collection = client.get_collection(name="knowledge_base")
+            count = collection.count()
+            
+            if count == 0:
+                print("Warning: 'knowledge_base' collection is empty.")
+            else:
+                # Query for top 6 similar documents
+                n_results = min(6, count)
+                results = collection.query(
+                    query_texts=[query_str],
+                    n_results=n_results
+                )
+                
+                # Parse query results
+                if results and "documents" in results and results["documents"]:
+                    documents = results["documents"][0]
+                    metadatas = results["metadatas"][0] if "metadatas" in results and results["metadatas"] else []
+                    distances = results["distances"][0] if "distances" in results and results["distances"] else []
+                    ids = results["ids"][0] if "ids" in results and results["ids"] else []
+                    
+                    for i in range(len(documents)):
+                        text = documents[i]
+                        meta = metadatas[i] if i < len(metadatas) else {}
+                        dist = distances[i] if i < len(distances) else 0.0
+                        doc_id = ids[i] if i < len(ids) else f"kb_{i}"
+                        
+                        # Convert L2 distance to similarity score
+                        similarity_score = 1.0 / (1.0 + dist)
+                        timestamp_str = meta.get("timestamp", "")
+                        
+                        retrieved_docs.append({
+                            "text": text,
+                            "source": doc_id,
+                            "similarity_score": similarity_score,
+                            "timestamp": timestamp_str
+                        })
+    except Exception as e:
+        print(f"Warning: Failed to query Chroma DB. Error: {e}")
+        
+    print(f"Found {len(retrieved_docs)} raw matching documents in Chroma.")
     
-    # Apply recency weighting post-retrieval (Time-Decay)
-    # reference time = 2026-06-27T13:47:31Z (as provided in metadata)
-    ref_time = datetime(2026, 6, 27, 13, 47, 31, tzinfo=timezone.utc)
+    # 4. Apply time-decay re-ranking
+    # Reference time is the current time in UTC
+    ref_time = datetime.now(timezone.utc)
     
     decayed_results = []
-    for chunk in raw_results:
-        timestamp_str = chunk.get("timestamp")
-        orig_score = chunk["score"]
+    for doc in retrieved_docs:
+        timestamp_str = doc["timestamp"]
+        similarity_score = doc["similarity_score"]
         
-        try:
-            chunk_time = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
-            age_days = (ref_time - chunk_time).days
-            if age_days < 0:
-                age_days = 0
-        except Exception:
-            age_days = 30  # fallback age of 30 days if timestamp parsing fails
-            
-        # Time-decay multiplier formula: exp(-lambda * age_days)
-        # lambda = 0.02 means 10 days = ~0.82 multiplier, 100 days = ~0.13 multiplier
-        decay_factor = math.exp(-0.02 * age_days)
-        decayed_score = orig_score * decay_factor
+        age_in_days = 30  # default fallback if timestamp parsing fails
+        if timestamp_str:
+            try:
+                # Replace 'Z' with UTC offset for python compatibility
+                doc_time = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+                age_in_days = (ref_time - doc_time).days
+                if age_in_days < 0:
+                    age_in_days = 0
+            except Exception as pe:
+                print(f"Error parsing timestamp '{timestamp_str}': {pe}")
+                
+        # Time-decay re-ranking score formula: decayed_score = similarity_score * exp(-0.05 * age_in_days)
+        decay_factor = math.exp(-0.05 * age_in_days)
+        decayed_score = similarity_score * decay_factor
         
-        decayed_chunk = {
-            "text": chunk["text"],
-            "source": chunk["source"],
-            "score": round(decayed_score, 4),
-            "original_score": round(orig_score, 4),
-            "timestamp": timestamp_str,
-            "age_days": age_days,
-            "decay_factor": round(decay_factor, 4)
-        }
-        decayed_results.append(decayed_chunk)
+        decayed_results.append({
+            "text": doc["text"],
+            "source": doc["source"],
+            "score": round(decayed_score, 4)
+        })
         
-    # Re-rank based on decayed scores
-    reranked_results = sorted(decayed_results, key=lambda x: x["score"], reverse=True)
+    # Sort by decayed score descending
+    decayed_results.sort(key=lambda x: x["score"], reverse=True)
     
-    print(f"Retrieved {len(reranked_results)} items. Best decayed score: {reranked_results[0]['score'] if reranked_results else 0.0}")
+    # Keep top 4
+    final_evidence = decayed_results[:4]
+    
+    if len(final_evidence) < 4:
+        print(f"Warning: Only {len(final_evidence)} evidence documents retrieved (fewer than the requested 4).")
+        
+    print(f"Retrieved {len(final_evidence)} evidence documents after time-decay re-ranking.")
     
     return {
-        "retrieved_evidence": reranked_results
+        "retrieved_evidence": final_evidence
     }
+
+if __name__ == "__main__":
+    # Test block with a sample customer profile
+    fake_state = {
+        "customer_profile": {
+            "company_name": "ApexLogistics",
+            "contract_value": 45000,
+            "contract_type": "Annual",
+            "health_score": 35,
+            "segment": "Mid-Market",
+            "churn_risk": "High",
+            "license_count": 100,
+            "active_users": 38
+        }
+    }
+    
+    print("=== TESTING RETRIEVAL NODE STANDALONE ===")
+    result = retrieval_node(fake_state)
+    print("\nResult:")
+    import pprint
+    pprint.pprint(result)

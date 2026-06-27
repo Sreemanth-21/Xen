@@ -1,0 +1,62 @@
+[
+  {
+    "doc_id": "kb_001",
+    "text": "Playbook: Seat Contraction and License Utilization Recovery. When license utilization falls below 70% for an account, schedule an expansion review, offer free admin training, and align on customer goals. Value: High priority retention tactic.",
+    "category": "churn_playbook",
+    "timestamp": "2026-06-26T12:00:00Z"
+  },
+  {
+    "doc_id": "kb_002",
+    "text": "Playbook: Churn Prevention for Payment Failures. If a customer experiences credit card expiry or billing issues, notify billing contact, grant 14-day grace period, and send automated warning alerts.",
+    "category": "policy",
+    "timestamp": "2026-06-15T09:00:00Z"
+  },
+  {
+    "doc_id": "kb_003",
+    "text": "Playbook: Annual Contract Renewal Guide. Engage enterprise customers 90 days before renewal. Present ROI dashboard, usage trends, and discuss multi-year expansion options.",
+    "category": "policy",
+    "timestamp": "2026-04-01T10:00:00Z"
+  },
+  {
+    "doc_id": "kb_004",
+    "text": "Playbook: Inactive Admin/Key Sponsor Churn Rescue. When the main admin or executive sponsor leaves the company, immediately engage the executive buyer, identify new admin candidates, and conduct a new onboarding session.",
+    "category": "churn_playbook",
+    "timestamp": "2026-06-25T15:30:00Z"
+  },
+  {
+    "doc_id": "kb_005",
+    "text": "Playbook: High Churn Risk Mitigations. Implement executive check-ins, custom CSM support, and customer success reviews for high-risk accounts with health scores below 50.",
+    "category": "churn_playbook",
+    "timestamp": "2026-03-30T08:00:00Z"
+  },
+  {
+    "doc_id": "kb_006",
+    "text": "Playbook: Expansion Trigger for High License Utilization. When active user count reaches 90% of license capacity and health score is above 80, automatically prompt CSM to offer expansion seats. Recommend 20-50% seat expansion.",
+    "category": "expansion_playbook",
+    "timestamp": "2026-06-20T11:00:00Z"
+  },
+  {
+    "doc_id": "kb_007",
+    "text": "Playbook: Upsell to Enterprise Tier. Customers on Professional plan showing interest in SSO, advanced audit logs, or custom security features should be routed to Account Executives for Enterprise tier upgrade.",
+    "category": "expansion_playbook",
+    "timestamp": "2026-05-15T14:00:00Z"
+  },
+  {
+    "doc_id": "kb_008",
+    "text": "Policy: Human Intervention for Ambiguous Cases. If customer signals are contradictory (e.g. concurrent usage drops and feature expansion requests), or health score is near 50 with mixed sentiment, CSMs must perform manual investigation before taking automated actions.",
+    "category": "policy",
+    "timestamp": "2026-06-22T09:00:00Z"
+  },
+  {
+    "doc_id": "kb_009",
+    "text": "Playbook: Multi-Year Agreement Incentives. For customers requesting price cuts or showing churn risk near renewal, CSMs can offer up to a 15% discount in exchange for converting from Annual to a 2-Year or 3-Year commitment.",
+    "category": "churn_playbook",
+    "timestamp": "2026-05-01T10:00:00Z"
+  },
+  {
+    "doc_id": "kb_010",
+    "text": "Policy: SLA and Escalation Paths. Urgent churn threats (competitor trials, sudden usage drops over 50%) must be escalated to the Director of Customer Success within 24 hours of detection.",
+    "category": "policy",
+    "timestamp": "2026-06-01T12:00:00Z"
+  }
+]
