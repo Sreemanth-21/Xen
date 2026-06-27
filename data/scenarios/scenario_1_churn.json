@@ -1,0 +1,15 @@
+{
+  "scenario_id": "scenario_1_churn",
+  "customer_name": "ApexLogistics",
+  "raw_text": "CRM Touchpoint Note - June 25, 2026:\nAccount: ApexLogistics. CSM: Sarah Jenkins.\nI had a touchpoint call with Marcus Vance, VP of Operations at ApexLogistics. He is extremely frustrated. Since their internal team restructuring last month, their active user count has plummeted from 95 active seats down to just 38 active seats out of the 100 licenses they purchase. Marcus mentioned they are actively trialing a competitor, LogiPulse, citing our persistent API latency issues (ticket #9932 is still unresolved after 2 weeks). He also pointed out that their annual contract is up for renewal on July 15, and they are currently leaning towards non-renewal unless we can address the API issues and offer a significant discount.",
+  "ground_truth_assumptions": {
+    "contract_type": "Annual",
+    "churn_risk": "High",
+    "health_score": 35,
+    "segment": "Mid-Market",
+    "license_count": 100,
+    "active_users": 38,
+    "contract_value": 45000
+  },
+  "expected_confidence": "high"
+}

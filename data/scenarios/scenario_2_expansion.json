@@ -1,0 +1,15 @@
+{
+  "scenario_id": "scenario_2_expansion",
+  "customer_name": "CloudScale Solutions",
+  "raw_text": "Email from VP of Engineering at CloudScale Solutions - June 26, 2026:\nHi Team,\nJust wanted to share some quick feedback. The automated workflows we set up last month have been a game-changer—our team is saving about 20 hours a week on average. Consequently, our usage has surged. We are currently utilizing 98 of our 100 seats, and we need to add another 50 licenses as we onboard our new engineering cohort next week. Could you send over a proposal to expand our seat count? Also, we are interested in upgrading from our current Professional plan to the Enterprise tier to get access to custom SSO and advanced audit logs. Our annual contract renewal isn't until November, but we'd like to co-terminate the new seats now.",
+  "ground_truth_assumptions": {
+    "contract_type": "Annual",
+    "churn_risk": "Low",
+    "health_score": 95,
+    "segment": "Mid-Market",
+    "license_count": 100,
+    "active_users": 98,
+    "contract_value": 60000
+  },
+  "expected_confidence": "high"
+}
