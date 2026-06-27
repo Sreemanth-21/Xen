@@ -1,178 +1,183 @@
 import os
-import json
 import math
 from typing import Any, List
-from groq import Groq
-from dotenv import load_dotenv
 from agents.graph import PulseState
-
-# Load environment variables
-load_dotenv()
-
-def get_groq_client():
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key:
-        return None
-    return Groq(api_key=api_key)
 
 def reasoning_node(state: PulseState) -> dict[str, Any]:
     print("--- RUNNING REASONING & ARBITRATION AGENT ---")
+    
+    # 1. Read input state variables
     customer_profile = state.get("customer_profile", {})
     retrieved_evidence = state.get("retrieved_evidence", [])
-    raw_input = state.get("raw_input", "")
+    assumptions = state.get("assumptions", {})
     
-    client = get_groq_client()
-    if not client:
-        # Fallback Mock in case GROQ_API_KEY is not configured
-        print("Mocking Reasoning LLM call due to missing Groq API Key.")
-        # Create dummy candidates
-        candidates = [
-            {
-                "action": "Initiate License Utilization Recovery Playbook",
-                "propensity": 8.0,
-                "context": 9.0,
-                "value": 7.5,
-                "levers": 8.5,
-                "confidence": 0.85,
-                "source_file": "kb_seat_contraction_v2.md"
-            },
-            {
-                "action": "Trigger High-risk Executive Check-in",
-                "propensity": 7.0,
-                "context": 8.0,
-                "value": 9.0,
-                "levers": 6.0,
-                "confidence": 0.80,
-                "source_file": "kb_high_risk_remedy.md"
-            }
-        ]
+    churn_risk = customer_profile.get("churn_risk", "Medium")
+    health_score = float(customer_profile.get("health_score", 50.0))
+    contract_value = customer_profile.get("contract_value")
+    
+    # 2. Compute Propensity (0-1)
+    # Propensity indicates the customer's likelihood to respond/accept the action.
+    # We map the categorical churn_risk to base scores: High=0.85, Medium=0.5, Low=0.2.
+    # We then nudge these using the health score as a secondary signal:
+    # - For High/Medium churn risk: lower health score boosts churn propensity (worse health).
+    # - For Low churn risk (expansion-leaning): higher health score boosts expansion propensity.
+    if churn_risk in ["High", "Medium"]:
+        base_propensity = 0.85 if churn_risk == "High" else 0.5
+        # Nudge: health score below 50 boosts propensity; above 50 lowers it. Max nudge is +/- 0.15.
+        nudge = (50.0 - health_score) / 50.0 * 0.15
+        propensity = max(0.0, min(1.0, base_propensity + nudge))
+    else:  # Low
+        # Expansion case: high health score blends to higher propensity
+        base_propensity = 0.2
+        propensity = 0.6 * base_propensity + 0.4 * (health_score / 100.0)
+        
+    # 3. Compute Context (0-1)
+    # The average score of time-decayed retrieved playbooks.
+    # Fallback to 0.1 if evidence is empty to prevent zero-out issues.
+    if retrieved_evidence:
+        scores = [float(e.get("score", 0.0)) for e in retrieved_evidence]
+        context = sum(scores) / len(scores)
     else:
-        # Construct prompt for LLM to get candidates and scores
-        system_prompt = (
-            "You are the Reasoning & Arbitration Agent for Xen, a B2B SaaS Customer Success Next Best Action platform.\n"
-            "Analyze the customer profile and the retrieved playbook evidence to suggest the best Next Best Actions (between 1 and 3 candidates).\n"
-            "For each candidate action, you must output raw scores from 0.0 to 10.0 for four components:\n"
-            "1. Propensity: Likelihood of customer accepting or responding to the action.\n"
-            "2. Context: Raw relevance of this action given their current profile and CRM notes.\n"
-            "3. Value: Impact/revenue value of this action.\n"
-            "4. Levers: Ease of execution or feasibility for the CSM.\n"
-            "Also specify 'source_file' matching one of the retrieved evidence sources, and 'confidence' (0.0 to 1.0).\n\n"
-            "IMPORTANT: Do NOT compute the priority score yourself. The priority score will be computed programmatically in code.\n\n"
-            "You must return a JSON object with the following format:\n"
-            "{\n"
-            "  \"candidates\": [\n"
-            "    {\n"
-            "      \"action\": \"Action description\",\n"
-            "      \"propensity\": number,\n"
-            "      \"context\": number,\n"
-            "      \"value\": number,\n"
-            "      \"levers\": number,\n"
-            "      \"confidence\": number,\n"
-            "      \"source_file\": \"filename.md\"\n"
-            "    }\n"
-            "  ]\n"
-            "}"
-        )
+        context = 0.1
         
-        evidence_text = "\n".join([
-            f"- File: {c.get('source')} | Text: {c.get('text')}"
-            for c in retrieved_evidence
-        ])
+    # 4. Compute Value (0-1)
+    # Normalized against a ceiling of $200,000, capped at 1.0.
+    # Fallback to 0.3 if contract_value is null.
+    if contract_value is None:
+        value = 0.3
+    else:
+        value = min(1.0, float(contract_value) / 200000.0)
         
-        user_prompt = (
-            f"Customer Profile:\n{json.dumps(customer_profile, indent=2)}\n\n"
-            f"Raw CRM Note:\n{raw_input}\n\n"
-            f"Retrieved Evidence Playbooks:\n{evidence_text}\n"
-        )
+    # 5. Compute Levers (0-1)
+    # Presence of a usable playbook (contains substring "playbook" in source/text case-insensitive).
+    has_playbook = False
+    for e in retrieved_evidence:
+        text = e.get("text", "").lower()
+        source = e.get("source", "").lower()
+        if "playbook" in text or "playbook" in source:
+            has_playbook = True
+            break
+    levers = 0.8 if has_playbook else 0.4
+    
+    # 6. Compute Priority Score (P * C * V * L)
+    priority = propensity * context * value * levers
+    
+    # 7. Select Action
+    # Pick based on propensity direction and risk segment
+    if churn_risk == "High":
+        action = "Schedule retention call"
+    elif churn_risk == "Low" and health_score >= 80:
+        action = "Propose upsell"
+    else:
+        action = "Flag for manual review"
         
-        try:
-            completion = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                response_format={"type": "json_object"},
-                temperature=0.2
-            )
+    # 8. Compute Confidence Score (0-1)
+    # Base confidence scales with context strength:
+    base_confidence = 0.4 + 0.6 * context
+    
+    # Deductions:
+    deduction = 0.0
+    # Inferred details from assumptions reduce the confidence
+    if "contract_type" in assumptions:
+        deduction += 0.2
+    if "health_score" in assumptions:
+        deduction += 0.2
+        
+    for key in assumptions:
+        if key not in ["contract_type", "health_score"]:
+            deduction += 0.1
             
-            result_text = completion.choices[0].message.content
-            data = json.loads(result_text)
-            candidates = data.get("candidates", [])
-        except Exception as e:
-            print(f"Error calling Groq API in Reasoning: {e}")
-            raise e
-
-    # Process and compute Priority in code
-    processed_candidates = []
-    for cand in candidates:
-        action_name = cand.get("action", "Unknown Action")
-        prop = float(cand.get("propensity", 5.0))
-        raw_context = float(cand.get("context", 5.0))
-        val = float(cand.get("value", 5.0))
-        levs = float(cand.get("levers", 5.0))
-        conf = float(cand.get("confidence", 0.5))
-        source = cand.get("source_file", "")
+    # Thin/no evidence penalty
+    if not retrieved_evidence or context <= 0.15:
+        deduction += 0.2
         
-        # Apply time-decay to Context specifically
-        # We find the matching chunk age in retrieved_evidence
-        age_days = 30  # default fallback
-        for chunk in retrieved_evidence:
-            if chunk.get("source") == source:
-                age_days = chunk.get("age_days", 30)
-                break
-                
-        # Time-decay factor: exp(-0.02 * age_days)
-        context_decay_factor = math.exp(-0.02 * age_days)
-        decayed_context = raw_context * context_decay_factor
+    # Null contract value penalty
+    if contract_value is None:
+        deduction += 0.1
         
-        # Compute Priority = Propensity * Context (decayed) * Value * Levers
-        priority = prop * decayed_context * val * levs
-        
-        processed_candidates.append({
-            "action": action_name,
-            "propensity": round(prop, 2),
-            "context": round(decayed_context, 2),
-            "raw_context": round(raw_context, 2),
-            "value": round(val, 2),
-            "levers": round(levs, 2),
-            "priority": round(priority, 2),
-            "confidence": round(conf, 2),
-            "source_file": source,
-            "age_days": age_days,
-            "decay_factor": round(context_decay_factor, 4)
-        })
-        
-    # Sort candidates by Priority descending
-    ranked_candidates = sorted(processed_candidates, key=lambda x: x["priority"], reverse=True)
+    confidence = max(0.1, min(1.0, base_confidence - deduction))
     
-    # Selected top action to populate recommendation
-    if ranked_candidates:
-        top_cand = ranked_candidates[0]
-        recommendation = {
-            "action": top_cand["action"],
-            "propensity": top_cand["propensity"],
-            "context": top_cand["context"],
-            "value": top_cand["value"],
-            "levers": top_cand["levers"],
-            "priority": top_cand["priority"],
-            "confidence": top_cand["confidence"],
-            "candidates": ranked_candidates  # keep all candidates for potential UI list
-        }
-    else:
-        recommendation = {
-            "action": "No action recommended",
-            "propensity": 0.0,
-            "context": 0.0,
-            "value": 0.0,
-            "levers": 0.0,
-            "priority": 0.0,
-            "confidence": 0.0,
-            "candidates": []
-        }
-        
-    print(f"Reasoning completed. Selected: '{recommendation['action']}' with Priority: {recommendation['priority']}")
+    print(f"Computed reasoning - Priority: {priority:.4f}, Confidence: {confidence:.4f}, Action: '{action}'")
     
+    # 9. Return structured recommendation dictionary
     return {
-        "recommendation": recommendation
+        "recommendation": {
+            "action": action,
+            "propensity": round(propensity, 4),
+            "context": round(context, 4),
+            "value": round(value, 4),
+            "levers": round(levers, 4),
+            "priority": round(priority, 4),
+            "confidence": round(confidence, 4)
+        }
     }
+
+if __name__ == "__main__":
+    # Test blocks representing different scenarios
+    state_churn = {
+        "customer_profile": {
+            "company_name": "ApexLogistics",
+            "contract_value": 45000,
+            "contract_type": "Annual",
+            "health_score": 35,
+            "segment": "Mid-Market",
+            "churn_risk": "High",
+            "license_count": 100,
+            "active_users": 38
+        },
+        "retrieved_evidence": [
+            {"text": "Playbook: Seat Contraction Recovery...", "source": "kb_001", "score": 0.3842},
+            {"text": "Playbook: Churn Prevention...", "source": "kb_002", "score": 0.2405}
+        ],
+        "assumptions": {}
+    }
+    
+    state_expansion = {
+        "customer_profile": {
+            "company_name": "CloudScale Solutions",
+            "contract_value": 60000,
+            "contract_type": "Annual",
+            "health_score": 95,
+            "segment": "Mid-Market",
+            "churn_risk": "Low",
+            "license_count": 100,
+            "active_users": 98
+        },
+        "retrieved_evidence": [
+            {"text": "Playbook: Expansion Trigger...", "source": "kb_006", "score": 0.521},
+            {"text": "Playbook: Upsell to Enterprise...", "source": "kb_007", "score": 0.381}
+        ],
+        "assumptions": {}
+    }
+    
+    state_ambiguous = {
+        "customer_profile": {
+            "company_name": "NovaRetail",
+            "contract_value": 36000,
+            "contract_type": "Annual",
+            "health_score": 55,
+            "segment": "Mid-Market",
+            "churn_risk": "Medium",
+            "license_count": 80,
+            "active_users": 42
+        },
+        "retrieved_evidence": [],  # no strong evidence
+        "assumptions": {
+            "contract_type": "Inferred Monthly contract based on billing notes."
+        }
+    }
+    
+    print("=== TESTING REASONING NODE STANDALONE ===")
+    
+    print("\n--- CHURN CASE ---")
+    rec_churn = reasoning_node(state_churn)
+    import pprint
+    pprint.pprint(rec_churn)
+    
+    print("\n--- EXPANSION CASE ---")
+    rec_exp = reasoning_node(state_expansion)
+    pprint.pprint(rec_exp)
+    
+    print("\n--- AMBIGUOUS CASE ---")
+    rec_amb = reasoning_node(state_ambiguous)
+    pprint.pprint(rec_amb)
