@@ -1,6 +1,8 @@
 import streamlit as st
 import copy
 import time
+import requests
+import os
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  PAGE CONFIG
@@ -13,866 +15,387 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  DESIGN SYSTEM  (XL Ventures-inspired: cream bg · forest green · serif)
+#  CSS INJECTION  — Streamlit 1.40+ compatible
+#  We load style.css as a raw string and inject via st.html()
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown("""
+_css_path = os.path.join(os.path.dirname(__file__), "style.css")
+with open(_css_path) as _f:
+    _css = _f.read()
+
+st.html(f"""
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-
 <style>
-/* ── Reset ─────────────────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; }
-html, body, .stApp { font-family: 'Inter', sans-serif; background: #F5F3EF; color: #1A1A1A; }
-#MainMenu, footer, header { visibility: hidden; }
-.block-container { padding: 0 2.5rem 3rem !important; max-width: 1440px !important; }
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: #EDE9E3; }
-::-webkit-scrollbar-thumb { background: #1A3D1A; border-radius: 3px; }
+{_css}
 
-/* ── Brand Header ──────────────────────────────────────────────────────────── */
-.pulse-nav {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 28px 0 24px;
-    border-bottom: 1px solid #D4CFC6;
-    margin-bottom: 40px;
-}
-.pulse-logo-mark {
-    font-family: 'EB Garamond', serif;
-    font-size: 28px;
-    font-weight: 700;
-    color: #1A3D1A;
-    letter-spacing: -0.02em;
-}
-.pulse-logo-sub {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #8A8880;
-    margin-top: 2px;
-}
-.nav-links { display: flex; gap: 32px; align-items: center; }
-.nav-link {
-    font-size: 13px;
-    color: #5A5A55;
-    text-decoration: none;
-    font-weight: 500;
-    letter-spacing: 0.01em;
-}
-.nav-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #1A3D1A;
-    background: #E8F0E8;
-    border: 1px solid #C2D4C2;
-    padding: 5px 14px;
-    border-radius: 20px;
-    letter-spacing: 0.04em;
-}
-.nav-status-dot {
-    width: 7px;
-    height: 7px;
-    background: #1A3D1A;
-    border-radius: 50%;
-    animation: blink 2s infinite;
-}
-@keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-}
+/* ── Component styles ─────────────────────────────────────────────────── */
+.pulse-nav {{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:28px 0 24px; border-bottom:1px solid #D4CFC6; margin-bottom:40px;
+}}
+.pulse-logo-mark {{
+  font-family:'EB Garamond',serif; font-size:28px; font-weight:700;
+  color:#1A3D1A; letter-spacing:-0.02em;
+}}
+.pulse-logo-sub {{
+  font-size:11px; font-weight:600; letter-spacing:0.12em;
+  text-transform:uppercase; color:#8A8880; margin-top:2px;
+}}
+.nav-links {{ display:flex; gap:32px; align-items:center; }}
+.nav-link {{ font-size:13px; color:#5A5A55; font-weight:500; }}
+.nav-status {{
+  display:inline-flex; align-items:center; gap:7px; font-size:12px;
+  font-weight:600; background:#E8F0E8; border:1px solid #C2D4C2;
+  color:#1A3D1A; padding:5px 14px; border-radius:20px;
+}}
+.nav-offline {{
+  display:inline-flex; align-items:center; gap:7px; font-size:12px;
+  font-weight:600; background:#FFF3CD; border:1px solid #FFEBA8;
+  color:#856404; padding:5px 14px; border-radius:20px;
+}}
+.nav-dot {{
+  width:7px; height:7px; border-radius:50%;
+  animation:blink 2s infinite; display:inline-block;
+}}
+@keyframes blink {{ 0%,100%{{opacity:1}} 50%{{opacity:0.3}} }}
 
-/* ── Page Hero ─────────────────────────────────────────────────────────────── */
-.page-hero {
-    margin-bottom: 48px;
-}
-.page-hero-label {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: #1A3D1A;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.page-hero-label::before {
-    content: '';
-    display: block;
-    width: 28px;
-    height: 1px;
-    background: #1A3D1A;
-}
-.page-hero-headline {
-    font-family: 'EB Garamond', serif;
-    font-size: 56px;
-    font-weight: 500;
-    color: #0F0F0E;
-    line-height: 1.08;
-    letter-spacing: -0.025em;
-    margin-bottom: 20px;
-}
-.page-hero-headline em {
-    font-style: italic;
-    color: #1A3D1A;
-}
-.page-hero-sub {
-    font-size: 16px;
-    color: #6B6B66;
-    line-height: 1.6;
-    max-width: 560px;
-}
+.hero-label {{
+  font-size:11px; font-weight:700; letter-spacing:0.15em;
+  text-transform:uppercase; color:#1A3D1A; margin-bottom:12px;
+  display:flex; align-items:center; gap:10px;
+}}
+.hero-label::before {{
+  content:''; display:block; width:28px; height:1px; background:#1A3D1A;
+}}
+.hero-headline {{
+  font-family:'EB Garamond',serif; font-size:54px; font-weight:500;
+  color:#0F0F0E; line-height:1.08; letter-spacing:-0.025em; margin-bottom:20px;
+}}
+.hero-headline em {{ font-style:italic; color:#1A3D1A; }}
+.hero-sub {{ font-size:16px; color:#6B6B66; line-height:1.6; max-width:560px; }}
 
-/* ── Section Labels ────────────────────────────────────────────────────────── */
-.section-eyebrow {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: #8A8880;
-    margin-bottom: 10px;
-}
-.section-heading {
-    font-family: 'EB Garamond', serif;
-    font-size: 24px;
-    font-weight: 600;
-    color: #0F0F0E;
-    margin-bottom: 4px;
-}
-hr.rule {
-    border: none;
-    border-top: 1px solid #D4CFC6;
-    margin: 28px 0;
-}
+.eyebrow {{
+  font-size:10px; font-weight:700; letter-spacing:0.15em;
+  text-transform:uppercase; color:#8A8880; margin-bottom:10px;
+}}
+.divider {{ border:none; border-top:1px solid #D4CFC6; margin:28px 0; }}
 
-/* ── Input Area ────────────────────────────────────────────────────────────── */
-.input-card {
-    background: #FFFFFF;
-    border: 1px solid #D4CFC6;
-    border-radius: 12px;
-    padding: 28px 28px 20px;
-    margin-bottom: 32px;
-}
-.input-card:focus-within {
-    border-color: #1A3D1A;
-    box-shadow: 0 0 0 3px rgba(26,61,26,0.06);
-}
-textarea {
-    background: transparent !important;
-    border: none !important;
-    color: #1A1A1A !important;
-    font-family: 'Inter', sans-serif !important;
-    font-size: 14px !important;
-    resize: none !important;
-    padding: 0 !important;
-}
-textarea:focus { box-shadow: none !important; }
+.case-strip {{
+  display:flex; align-items:center; gap:16px; padding:10px 0;
+  margin-bottom:32px; border-bottom:1px solid #D4CFC6; font-size:12px; color:#8A8880;
+}}
+.case-id {{
+  font-family:'JetBrains Mono',monospace; font-size:11px; color:#1A3D1A;
+  background:#E8F0E8; padding:2px 8px; border-radius:4px;
+}}
+.case-strip-dot {{ color:#D4CFC6; }}
+.case-strip-right {{ margin-left:auto; color:#1A3D1A; font-weight:600; font-size:11px; }}
 
-/* ── Primary Button ────────────────────────────────────────────────────────── */
-.stButton > button {
-    font-family: 'Inter', sans-serif !important;
-    font-weight: 600 !important;
-    border-radius: 6px !important;
-    transition: all 0.18s ease !important;
-    letter-spacing: 0.01em !important;
-}
-.stButton > button[kind="primary"] {
-    background: #1A3D1A !important;
-    color: #F5F3EF !important;
-    border: 1px solid #1A3D1A !important;
-    box-shadow: 0 2px 8px rgba(26,61,26,0.2) !important;
-}
-.stButton > button[kind="primary"]:hover {
-    background: #0F2A0F !important;
-    box-shadow: 0 4px 14px rgba(26,61,26,0.3) !important;
-    transform: translateY(-1px) !important;
-}
-.stButton > button:not([kind="primary"]) {
-    background: #FFFFFF !important;
-    color: #1A1A1A !important;
-    border: 1px solid #D4CFC6 !important;
-}
-.stButton > button:not([kind="primary"]):hover {
-    background: #F0EDE8 !important;
-    border-color: #1A3D1A !important;
-    transform: translateY(-1px) !important;
-}
+.rec-card {{
+  background:#FFFFFF; border:1px solid #C2D4C2; border-radius:12px;
+  padding:28px; margin-bottom:24px; box-shadow:0 2px 12px rgba(26,61,26,.06);
+}}
+.rec-action {{
+  font-family:'EB Garamond',serif; font-size:28px; font-weight:600;
+  color:#0F0F0E; line-height:1.15; margin-bottom:12px;
+}}
+.badge-high {{
+  display:inline-flex; align-items:center; gap:6px; background:#E8F0E8;
+  border:1px solid #A8C4A8; color:#1A3D1A; padding:4px 12px;
+  border-radius:20px; font-size:11px; font-weight:700;
+}}
+.badge-low {{
+  display:inline-flex; align-items:center; gap:6px; background:#FDF8EE;
+  border:1px solid #E6C870; color:#8A6A00; padding:4px 12px;
+  border-radius:20px; font-size:11px; font-weight:700;
+}}
+.badge-dot {{
+  width:6px; height:6px; border-radius:50%; display:inline-block;
+}}
+.conf-row {{
+  display:flex; justify-content:space-between; font-size:10px;
+  color:#8A8880; margin-bottom:4px; margin-top:14px;
+}}
+.conf-track {{
+  background:#EDE9E3; border-radius:4px; height:6px; overflow:hidden;
+}}
+.conf-fill {{ height:100%; border-radius:4px; }}
 
-/* ── Confidence Badge ──────────────────────────────────────────────────────── */
-.badge-high {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: #E8F0E8; border: 1px solid #A8C4A8;
-    color: #1A3D1A; padding: 4px 12px;
-    border-radius: 20px; font-size: 11px; font-weight: 700;
-    letter-spacing: 0.04em;
-}
-.badge-low {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: #FDF8EE; border: 1px solid #E6C870;
-    color: #8A6A00; padding: 4px 12px;
-    border-radius: 20px; font-size: 11px; font-weight: 700;
-    letter-spacing: 0.04em;
-}
-.badge-dot-green { width:6px; height:6px; border-radius:50%; background:#1A3D1A; display:inline-block; }
-.badge-dot-amber { width:6px; height:6px; border-radius:50%; background:#D4A017; display:inline-block; }
+.pcvl-grid {{
+  display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:16px 0;
+}}
+.pcvl-tile {{
+  background:#FFFFFF; border:1px solid #D4CFC6; border-radius:10px;
+  padding:16px 12px 12px; text-align:center;
+  transition:border-color .18s,transform .18s;
+}}
+.pcvl-tile:hover {{ border-color:#1A3D1A; transform:translateY(-2px); }}
+.pcvl-tile-hi {{ border-color:#C2D4C2; background:#F0F7F0; }}
+.pcvl-label {{
+  font-size:9px; font-weight:700; letter-spacing:0.15em;
+  text-transform:uppercase; color:#8A8880; margin-bottom:6px;
+}}
+.pcvl-value {{
+  font-family:'EB Garamond',serif; font-size:32px;
+  font-weight:600; line-height:1;
+}}
+.pcvl-sub {{ font-size:9px; color:#8A8880; margin-top:4px; }}
 
-/* ── PCVL Tiles ────────────────────────────────────────────────────────────── */
-.pcvl-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin: 20px 0; }
-.pcvl-tile {
-    background: #FFFFFF;
-    border: 1px solid #D4CFC6;
-    border-radius: 10px;
-    padding: 18px 14px 14px;
-    text-align: center;
-    transition: border-color 0.18s, transform 0.18s;
-}
-.pcvl-tile:hover { border-color: #1A3D1A; transform: translateY(-2px); }
-.pcvl-tile-label { font-size: 9px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #8A8880; margin-bottom: 8px; }
-.pcvl-tile-value { font-family: 'EB Garamond', serif; font-size: 34px; font-weight: 600; line-height: 1; }
-.pcvl-g { color: #1A3D1A; }
-.pcvl-b { color: #1A4060; }
-.pcvl-p { color: #5A3080; }
-.pcvl-k { color: #0F0F0E; }
-.pcvl-tile-sub { font-size: 9px; color: #8A8880; margin-top: 4px; }
+.ev-wrap {{
+  background:#FFFFFF; border:1px solid #D4CFC6; border-radius:8px;
+  padding:14px 16px; margin-bottom:10px;
+}}
+.ev-row {{
+  display:flex; align-items:center; justify-content:space-between;
+}}
+.ev-source {{
+  background:#E8F0E8; border:1px solid #A8C4A8; color:#1A3D1A;
+  font-size:10px; font-weight:700; padding:3px 9px; border-radius:4px;
+}}
+.ev-score {{ font-size:11px; color:#8A8880; font-family:'JetBrains Mono',monospace; }}
+.ev-bar-track {{
+  height:3px; background:#EDE9E3; border-radius:2px;
+  margin-top:8px; overflow:hidden;
+}}
+.ev-bar-fill {{ height:100%; border-radius:2px; background:#1A3D1A; }}
 
-/* ── Confidence Meter ──────────────────────────────────────────────────────── */
-.conf-track {
-    background: #EDE9E3;
-    border-radius: 4px;
-    height: 6px;
-    overflow: hidden;
-    margin: 6px 0 0;
-}
-.conf-fill { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
+.expl-quote {{
+  border-left:3px solid #1A3D1A; padding:14px 18px; background:#F0EDE8;
+  border-radius:0 8px 8px 0; font-size:14px; color:#2A2A25;
+  line-height:1.65; margin:16px 0;
+}}
+.lever-pill {{
+  display:inline-flex; align-items:center; gap:6px; background:#F0EDE8;
+  border:1px solid #D4CFC6; color:#3A3A35; border-radius:6px;
+  padding:6px 12px; font-size:12px; font-weight:500; margin-top:10px;
+}}
 
-/* ── Explanation Quote ─────────────────────────────────────────────────────── */
-.explanation-quote {
-    border-left: 3px solid #1A3D1A;
-    padding: 14px 18px;
-    background: #F0EDE8;
-    border-radius: 0 8px 8px 0;
-    font-size: 14px;
-    color: #2A2A25;
-    line-height: 1.65;
-    font-style: italic;
-    margin: 16px 0;
-}
+.mem-diff {{
+  background:#EDF5F0; border:1px solid #A8C4B0; border-radius:10px;
+  padding:16px 20px; margin-bottom:28px; font-size:13px;
+  color:#2A4A30; line-height:1.6;
+}}
 
-/* ── Levers ────────────────────────────────────────────────────────────────── */
-.lever-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: #F0EDE8;
-    border: 1px solid #D4CFC6;
-    color: #3A3A35;
-    border-radius: 6px;
-    padding: 6px 12px;
-    font-size: 12px;
-    font-weight: 500;
-    margin-top: 10px;
-}
+.banner-ok {{
+  background:#E8F0E8; border:1px solid #A8C4A8; border-radius:10px;
+  padding:20px 24px; margin-top:16px; display:flex;
+  align-items:flex-start; gap:16px;
+}}
+.banner-no {{
+  background:#FDECEA; border:1px solid #F0BABA; border-radius:10px;
+  padding:20px 24px; margin-top:16px; display:flex;
+  align-items:flex-start; gap:16px;
+}}
+.banner-title {{
+  font-family:'EB Garamond',serif; font-size:18px; font-weight:600;
+}}
+.banner-sub {{ font-size:12px; color:#6B6B66; margin-top:3px; line-height:1.5; }}
 
-/* ── Memory Diff ───────────────────────────────────────────────────────────── */
-.memory-diff {
-    background: #EDF5F0;
-    border: 1px solid #A8C4B0;
-    border-radius: 10px;
-    padding: 16px 20px;
-    margin-bottom: 28px;
-    font-size: 13px;
-    color: #2A4A30;
-    line-height: 1.6;
-}
-.memory-diff-label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #1A3D1A;
-    margin-bottom: 6px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
+.chip {{
+  display:inline-flex; align-items:center; gap:5px; padding:3px 10px;
+  border-radius:4px; font-size:10px; font-weight:700;
+  letter-spacing:0.08em; text-transform:uppercase;
+}}
+.chip-pending  {{ background:#FDF8EE; border:1px solid #E6C870; color:#8A6A00; }}
+.chip-approved {{ background:#E8F0E8; border:1px solid #A8C4A8; color:#1A3D1A; }}
+.chip-rejected {{ background:#FDECEA; border:1px solid #F0BABA; color:#B03020; }}
+.chip-editing  {{ background:#F0EAF8; border:1px solid #C8A8E0; color:#6030A0; }}
 
-/* ── Agent Thinking Tree ───────────────────────────────────────────────────── */
-.agent-tree-wrap { margin-bottom: 40px; }
+.sb-row {{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:7px 0; border-bottom:1px solid #254B25; font-size:12px;
+}}
+.sb-head {{
+  font-size:10px; font-weight:700; letter-spacing:0.12em;
+  text-transform:uppercase; color:#A8C4A8; margin:24px 0 10px;
+  padding-bottom:6px; border-bottom:1px solid #254B25;
+}}
+.health-track {{
+  background:#254B25; border-radius:3px; height:4px;
+  margin-top:6px; overflow:hidden;
+}}
+.health-fill {{ height:100%; border-radius:3px; }}
 
-.agent-node {
-    display: flex;
-    gap: 0;
-    margin-bottom: 0;
-}
-.agent-node-rail {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 44px;
-    flex-shrink: 0;
-}
-.agent-node-circle {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 2px solid #1A3D1A;
-    background: #FFFFFF;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    flex-shrink: 0;
-    z-index: 1;
-    transition: background 0.2s;
-}
-.agent-node-circle.active { background: #1A3D1A; }
-.agent-node-circle.final  { background: #0F2A0F; border-color: #0F2A0F; }
-.agent-node-line {
-    width: 2px;
-    flex: 1;
-    min-height: 16px;
-    background: linear-gradient(to bottom, #1A3D1A, #C2D4C2);
-}
+/* Agent tree */
+.node-header {{
+  padding-top:4px; margin-bottom:8px;
+}}
+.node-name {{
+  font-family:'EB Garamond',serif; font-size:19px;
+  font-weight:600; color:#0F0F0E;
+}}
+.node-role {{ font-size:11px; color:#8A8880; font-weight:500; }}
+.node-thought {{
+  background:#FFFFFF; border:1px solid #D4CFC6; border-radius:12px;
+  padding:16px 20px; margin-bottom:12px;
+  box-shadow:0 2px 8px rgba(0,0,0,.015);
+}}
+.node-thought-lbl {{
+  font-size:9px; font-weight:700; letter-spacing:0.12em;
+  text-transform:uppercase; color:#8A8880; margin-bottom:6px;
+}}
+.node-thought-txt {{ font-size:13px; color:#4A4A45; line-height:1.65; }}
+.out-card {{
+  background:#FDFDFB; border:1px solid #D4CFC6;
+  border-radius:8px; padding:14px 18px; margin-bottom:12px;
+}}
+.out-title {{
+  font-size:9px; font-weight:700; letter-spacing:0.12em;
+  text-transform:uppercase; color:#1A3D1A; margin-bottom:8px;
+}}
+.out-row {{
+  display:flex; justify-content:space-between;
+  padding:5px 0; border-bottom:1px solid #EAE6DF; font-size:12.5px;
+}}
+.out-row-k {{ color:#8A8880; }}
+.out-row-v {{ font-weight:600; color:#0F0F0E; }}
+.assumption-tag {{
+  display:inline-flex; align-items:center; gap:6px; background:#FDF8EE;
+  border:1px solid #E6C870; color:#7A5800; border-radius:5px;
+  padding:3px 10px; font-size:11px; font-weight:600;
+  margin-right:5px; margin-bottom:4px;
+}}
+.pill-route {{
+  background:#E8F0E8; border:1px solid #A8C4A8; padding:4px 12px;
+  border-radius:20px; font-size:11px; font-weight:600; color:#1A3D1A;
+}}
+.pill-hitl {{
+  background:#F0EDE8; border:1px solid #D4CFC6; padding:4px 12px;
+  border-radius:20px; font-size:11px; font-weight:600; color:#3A3A35;
+}}
+.pill-score {{
+  background:#FFFFFF; border:1px solid #D4CFC6; padding:6px 12px;
+  border-radius:8px; font-size:12px; display:inline-flex; gap:6px;
+}}
 
-.agent-node-content {
-    flex: 1;
-    padding: 0 0 28px 16px;
-}
-.agent-node-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 10px;
-    padding-top: 6px;
-}
-.agent-node-name {
-    font-family: 'EB Garamond', serif;
-    font-size: 19px;
-    font-weight: 600;
-    color: #0F0F0E;
-}
-.agent-node-role {
-    font-size: 11px;
-    color: #8A8880;
-    font-weight: 500;
-}
-.agent-thought-box {
-    background: #FFFFFF;
-    border: 1px solid #D4CFC6;
-    border-radius: 10px;
-    padding: 16px 18px;
-    margin-bottom: 10px;
-    font-size: 13px;
-    color: #3A3A35;
-    line-height: 1.6;
-}
-.agent-thought-label {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #8A8880;
-    margin-bottom: 6px;
-}
-.agent-output-box {
-    background: #F0EDE8;
-    border: 1px solid #D4CFC6;
-    border-radius: 8px;
-    padding: 10px 14px;
-    font-size: 12px;
-    font-family: 'JetBrains Mono', monospace;
-    color: #1A3D1A;
-    margin-bottom: 10px;
-    line-height: 1.5;
-}
-.agent-assumption-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: #FDF8EE;
-    border: 1px solid #E6C870;
-    color: #7A5800;
-    border-radius: 5px;
-    padding: 3px 10px;
-    font-size: 11px;
-    font-weight: 600;
-    margin-right: 6px;
-    margin-bottom: 6px;
-}
+.assume-box {{
+  background:#FFFDF5; border:1px solid #E6C870; border-radius:10px;
+  padding:18px 20px; margin:4px 0 12px;
+}}
+.assume-box-title {{
+  font-size:10px; font-weight:700; letter-spacing:0.12em;
+  text-transform:uppercase; color:#8A6A00; margin-bottom:14px;
+}}
 
-/* ── Before/After Cards ────────────────────────────────────────────────────── */
-.cmp-before {
-    background: #FDF3F3;
-    border: 1px solid #F0BABA;
-    border-radius: 10px;
-    padding: 20px;
-}
-.cmp-after {
-    background: #F0F7F0;
-    border: 1px solid #A8C4A8;
-    border-radius: 10px;
-    padding: 20px;
-}
-.cmp-label {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    margin-bottom: 8px;
-}
-.cmp-before .cmp-label { color: #C0392B; }
-.cmp-after  .cmp-label { color: #1A3D1A; }
-.cmp-action { font-family: 'EB Garamond', serif; font-size: 18px; font-weight: 600; }
-.cmp-before .cmp-action { color: #C0392B; }
-.cmp-after  .cmp-action { color: #1A3D1A; }
-.cmp-stats { font-size: 12px; color: #6B6B66; margin-top: 8px; line-height: 1.8; }
+.cmp-before {{
+  background:#FDF3F3; border:1px solid #F0BABA;
+  border-radius:10px; padding:20px;
+}}
+.cmp-after {{
+  background:#F0F7F0; border:1px solid #A8C4A8;
+  border-radius:10px; padding:20px;
+}}
+.cmp-label {{
+  font-size:9px; font-weight:700; letter-spacing:0.12em;
+  text-transform:uppercase; margin-bottom:8px;
+}}
+.cmp-action {{
+  font-family:'EB Garamond',serif; font-size:18px; font-weight:600;
+}}
 
-/* ── Recommendation Card ───────────────────────────────────────────────────── */
-.rec-card {
-    background: #FFFFFF;
-    border: 1px solid #C2D4C2;
-    border-radius: 12px;
-    padding: 28px;
-    margin-bottom: 24px;
-    box-shadow: 0 2px 12px rgba(26,61,26,0.06);
-}
-
-/* ── Evidence Cards ────────────────────────────────────────────────────────── */
-.ev-card {
-    background: #FFFFFF;
-    border: 1px solid #D4CFC6;
-    border-radius: 8px;
-    padding: 14px 16px;
-    margin-bottom: 10px;
-    transition: border-color 0.18s;
-}
-.ev-card:hover { border-color: #1A3D1A; }
-.ev-text { font-size: 13px; color: #2A2A25; line-height: 1.55; margin-bottom: 10px; }
-.ev-footer { display: flex; align-items: center; justify-content: space-between; }
-.ev-source {
-    background: #E8F0E8;
-    border: 1px solid #A8C4A8;
-    color: #1A3D1A;
-    font-size: 10px;
-    font-weight: 700;
-    padding: 3px 9px;
-    border-radius: 4px;
-    letter-spacing: 0.04em;
-}
-.ev-score-bar { display: flex; align-items: center; gap: 8px; }
-.ev-score-track { width: 52px; height: 3px; background: #EDE9E3; border-radius: 2px; overflow: hidden; }
-.ev-score-fill { height: 100%; background: #1A3D1A; border-radius: 2px; }
-.ev-score-num { font-size: 10px; color: #8A8880; font-family: 'JetBrains Mono', monospace; }
-
-/* ── Status Chips ──────────────────────────────────────────────────────────── */
-.chip { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:4px; font-size:10px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; }
-.chip-pending  { background:#FDF8EE; border:1px solid #E6C870; color:#8A6A00; }
-.chip-approved { background:#E8F0E8; border:1px solid #A8C4A8; color:#1A3D1A; }
-.chip-rejected { background:#FDECEA; border:1px solid #F0BABA; color:#B03020; }
-.chip-editing  { background:#F0EAF8; border:1px solid #C8A8E0; color:#6030A0; }
-
-/* ── HITL Banners ──────────────────────────────────────────────────────────── */
-.banner {
-    border-radius: 10px;
-    padding: 20px 24px;
-    margin-top: 16px;
-    display: flex;
-    align-items: flex-start;
-    gap: 16px;
-}
-.banner-approved { background: #E8F0E8; border: 1px solid #A8C4A8; }
-.banner-rejected { background: #FDECEA; border: 1px solid #F0BABA; }
-.banner-icon { font-size: 26px; }
-.banner-title { font-family: 'EB Garamond', serif; font-size: 18px; font-weight: 600; }
-.banner-approved .banner-title { color: #1A3D1A; }
-.banner-rejected .banner-title { color: #B03020; }
-.banner-sub { font-size: 12px; color: #6B6B66; margin-top: 3px; line-height: 1.5; }
-
-/* ── Case strip ────────────────────────────────────────────────────────────── */
-.case-strip {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 10px 0;
-    margin-bottom: 32px;
-    border-bottom: 1px solid #D4CFC6;
-    font-size: 12px;
-    color: #8A8880;
-}
-.case-strip code {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: #1A3D1A;
-    background: #E8F0E8;
-    padding: 2px 8px;
-    border-radius: 4px;
-}
-.case-strip-sep { color: #D4CFC6; }
-
-/* ── Sidebar ───────────────────────────────────────────────────────────────── */
-[data-testid="stSidebar"] {
-    background: #FFFFFF !important;
-    border-right: 1px solid #D4CFC6 !important;
-}
-[data-testid="stSidebar"] > div { padding: 1.5rem 1.25rem; }
-.sb-section { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8A8880; margin: 20px 0 10px; padding-bottom: 6px; border-bottom: 1px solid #EDE9E3; }
-.sb-stat { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid #F0EDE8; }
-.sb-stat-label { font-size: 11px; color: #8A8880; }
-.sb-stat-value { font-size: 12px; font-weight: 600; color: #1A1A1A; }
-.health-track { background: #EDE9E3; border-radius: 3px; height: 4px; margin-top: 6px; overflow: hidden; }
-.health-fill { height: 100%; border-radius: 3px; }
-
-/* ── Selectbox / Input ─────────────────────────────────────────────────────── */
-[data-baseweb="select"] > div {
-    background: #FFFFFF !important;
-    border-color: #D4CFC6 !important;
-    color: #1A1A1A !important;
-    border-radius: 8px !important;
-}
-[data-baseweb="select"] > div:focus-within { border-color: #1A3D1A !important; }
-.stTextInput > div > input {
-    background: #FFFFFF !important;
-    border: 1px solid #D4CFC6 !important;
-    border-radius: 6px !important;
-    color: #1A1A1A !important;
-    font-size: 13px !important;
-}
-.stTextInput > div > input:focus { border-color: #1A3D1A !important; box-shadow: 0 0 0 3px rgba(26,61,26,0.06) !important; }
-.stRadio label { font-size: 13px !important; color: #3A3A35 !important; }
-
-/* Expander */
-[data-testid="stExpander"] {
-    background: #FFFFFF !important;
-    border: 1px solid #D4CFC6 !important;
-    border-radius: 8px !important;
-    margin-bottom: 10px !important;
-}
-[data-testid="stExpander"]:hover { border-color: #1A3D1A !important; }
-
-/* Spinner */
-.stSpinner > div { border-top-color: #1A3D1A !important; }
-
-/* Selectbox label */
-.stSelectbox > label, .stTextArea > label, .stTextInput > label, .stRadio > label > div > p {
-    color: #5A5A55 !important;
-    font-size: 12px !important;
-    font-weight: 600 !important;
-}
 </style>
-""", unsafe_allow_html=True)
+""")
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  SCENARIO DATA  (enriched with agent_thoughts tree)
+#  API CLIENT
 # ─────────────────────────────────────────────────────────────────────────────
-SCENARIOS = {
-    "🔴  ACME Corp — Churn Risk": {
-        "case_id": "PULSE-2024-ACME-101",
-        "raw_input": (
-            "ACME Corp's lead CSM reports that usage of key dashboards has dropped 40% in the last "
-            "30 days. The primary champion VP of Product left the company last week, and they are "
-            "currently on an annual contract renewing in 90 days. Need immediate playbook action."
-        ),
-        "customer_profile": {
-            "name": "ACME Corp", "contract_type": "Enterprise (Annual)",
-            "contract_value": "$120,000 ARR", "tenure_months": 18,
-            "active_users": 45, "health_score": 42,
-        },
-        "assumptions": {
-            "contract_type": {
-                "value": "Enterprise (Annual)",
-                "description": "Inferred from company domain and seat count patterns. Not confirmed in CRM.",
-                "agent": "Ingestion",
-                "type": "select",
-                "options": ["Enterprise (Annual)", "Enterprise (Monthly)", "Self-Serve (Monthly)", "SMB"],
-            },
-            "renewing_in_90_days": {
-                "value": "Yes",
-                "description": "Assumed based on calendar-year sync. No explicit renewal date in CRM.",
-                "agent": "Ingestion",
-                "type": "radio",
-                "options": ["Yes", "No"],
-            },
-        },
-        "retrieved_evidence": [
-            {
-                "text": "Enterprise clients with usage drops >30% and VP transitions should receive an Executive Business Review (EBR) within 7 days.",
-                "source": "Churn Prevention Playbook v2.4",
-                "score": 0.89,
-            },
-            {
-                "text": "ACME Corp usage logs show login counts went from 110/week to 65/week over the past 30 days.",
-                "source": "Telemetry Database",
-                "score": 0.82,
-            },
-        ],
-        "recommendation": {
-            "action": "Schedule Executive Business Review (EBR)",
-            "propensity": 0.85, "context": 0.78, "value": 0.90,
-            "levers": "Add 3-month trial of Premium Support & schedule VP-level meeting.",
-            "priority": 5.97, "confidence": 0.88,
-        },
-        "explanation": (
-            "The model recommends scheduling an Executive Business Review (EBR) with ACME Corp immediately. "
-            "Evidence from the Churn Prevention Playbook v2.4 indicates that enterprise clients experiencing "
-            "usage drops exceeding 30% alongside executive champion departures require an EBR within 7 days. "
-            "Telemetry confirms a 40% dashboard login drop. Confidence is 0.88 — strong signal."
-        ),
-        "agent_thoughts": [
-            {
-                "agent": "Planner", "icon": "🧭", "role": "Orchestration Planner",
-                "thought": "I received a raw CRM signal and assessed what information is missing. I determined the optimal agent routing: Ingestion first (to parse structured profile data), then Retrieval (to find matching playbooks), then Reasoning (to score recommendations), then Explainability (to generate the rationale).",
-                "output": "Routing sequence: Ingestion → Retrieval → Reasoning → Explainability → [HITL Gate]",
-                "assumptions_keys": [],
-                "status": "complete",
-            },
-            {
-                "agent": "Ingestion", "icon": "📥", "role": "Data Ingestion Agent",
-                "thought": "I parsed the CRM note and extracted a structured customer profile. I identified 2 fields that are absent from the CRM record and had to infer them from contextual signals. These assumptions are flagged for human review.",
-                "output": "Profile extracted: ACME Corp · 45 active users · Health score: 42/100 · 18-month tenure\n⚠ 2 assumptions flagged: contract_type, renewing_in_90_days",
-                "assumptions_keys": ["contract_type", "renewing_in_90_days"],
-                "status": "complete",
-            },
-            {
-                "agent": "Retrieval", "icon": "🔍", "role": "Knowledge Retrieval Agent",
-                "thought": "I queried the Chroma vector store with the enriched customer profile as the retrieval context. I found 2 highly relevant playbook chunks from the knowledge base. Both exceeded the relevance threshold of 0.75.",
-                "output": "Retrieved 2 chunks · Top score: 0.89 · Source: Churn Prevention Playbook v2.4",
-                "assumptions_keys": [],
-                "status": "complete",
-            },
-            {
-                "agent": "Reasoning", "icon": "⚖️", "role": "Reasoning & Scoring Agent",
-                "thought": "I computed the PCVL priority score using the customer profile and evidence. The high propensity (0.85) is driven by the usage drop and champion departure. Context (0.78) reflects time-critical renewal window. Value (0.90) reflects $120K ARR at risk. The final priority score is 5.97.",
-                "output": "Priority = P(0.85) × C(0.78) × V(0.90) × L(10) = 5.97\nRecommended action: Schedule Executive Business Review (EBR)",
-                "assumptions_keys": [],
-                "status": "complete",
-            },
-            {
-                "agent": "Explainability", "icon": "💬", "role": "Explainability Agent",
-                "thought": "I composed a human-readable rationale for the CSM by combining the recommendation, evidence citations, and confidence level. Confidence (0.88) is high enough that no low-confidence warning is needed. I cited both the playbook and telemetry sources explicitly.",
-                "output": "Explanation generated · Confidence: 0.88 · No warning flags triggered",
-                "assumptions_keys": [],
-                "status": "complete",
-            },
-            {
-                "agent": "HITL Gate", "icon": "🛑", "role": "Human-in-the-Loop Interrupt",
-                "thought": "Execution is paused. The orchestration layer has completed its analysis. Control is now with the CSM. The recommended action will not be executed until a human decision (Approve, Edit, or Reject) is submitted.",
-                "output": "Status: pending_review · Awaiting CSM decision",
-                "assumptions_keys": [],
-                "status": "waiting",
-            },
-        ],
-        "memory_diff": {
-            "past_recommendation": "Send Automated Churn Survey Email",
-            "human_correction": "Schedule Executive Business Review (EBR)",
-            "context": "Similar case found (ACME Corp, 6 months ago, relevance 0.87). CSM override recorded.",
-        },
-    },
+BACKEND = "http://localhost:8000"
 
-    "🟢  Globex Inc — Expansion": {
-        "case_id": "PULSE-2024-GLOBEX-202",
-        "raw_input": (
-            "Globex Inc has added 50 new seats this month, hitting 98% utilization. "
-            "The new Director of Customer Experience expressed interest in our premium analytics add-on. "
-            "They are currently on a self-serve monthly plan."
-        ),
-        "customer_profile": {
-            "name": "Globex Inc", "contract_type": "Self-Serve (Monthly)",
-            "contract_value": "$15,000 ARR", "tenure_months": 6,
-            "active_users": 150, "health_score": 92,
-        },
-        "assumptions": {
-            "contract_type": {
-                "value": "Self-Serve (Monthly)",
-                "description": "Inferred from subscription tier metadata. Not explicitly confirmed.",
-                "agent": "Ingestion",
-                "type": "select",
-                "options": ["Self-Serve (Monthly)", "Enterprise (Monthly)", "Enterprise (Annual)", "SMB"],
-            },
-        },
-        "retrieved_evidence": [
-            {
-                "text": "Accounts with seat utilization >90% and positive champion feedback should be pitched the Enterprise Upgrade Plan.",
-                "source": "Account Expansion Playbook",
-                "score": 0.94,
-            },
-        ],
-        "recommendation": {
-            "action": "Propose Enterprise Upgrade Plan",
-            "propensity": 0.92, "context": 0.80, "value": 0.75,
-            "levers": "Offer 15% discount on 2-year contract lock-in.",
-            "priority": 6.62, "confidence": 0.94,
-        },
-        "explanation": (
-            "The model recommends proposing an Enterprise Upgrade Plan to Globex Inc. "
-            "According to the Account Expansion Playbook (relevance 0.94), accounts exceeding 90% seat "
-            "utilization with positive champion signals are prime expansion candidates. "
-            "With 150 active users at 98% utilization and a new champion engaged, all signals point "
-            "to high-propensity expansion. Confidence: 0.94."
-        ),
-        "agent_thoughts": [
-            {
-                "agent": "Planner", "icon": "🧭", "role": "Orchestration Planner",
-                "thought": "I detected a strong expansion signal in the input: seat utilization near capacity and a new champion expressing interest. I routed to Ingestion to structure the account data, then Retrieval for expansion playbooks, then Reasoning to compute the priority score.",
-                "output": "Routing sequence: Ingestion → Retrieval → Reasoning → Explainability → [HITL Gate]",
-                "assumptions_keys": [], "status": "complete",
-            },
-            {
-                "agent": "Ingestion", "icon": "📥", "role": "Data Ingestion Agent",
-                "thought": "I parsed the engagement signal and extracted the customer profile. I found 1 field that required inference: the contract type was not explicitly stated in the input and was inferred from subscription tier metadata.",
-                "output": "Profile extracted: Globex Inc · 150 active users · Health score: 92/100\n⚠ 1 assumption flagged: contract_type",
-                "assumptions_keys": ["contract_type"], "status": "complete",
-            },
-            {
-                "agent": "Retrieval", "icon": "🔍", "role": "Knowledge Retrieval Agent",
-                "thought": "I found a highly relevant expansion playbook chunk with a relevance score of 0.94 — above our high-confidence threshold of 0.90. This strongly supports the enterprise upgrade recommendation.",
-                "output": "Retrieved 1 chunk · Score: 0.94 · Source: Account Expansion Playbook",
-                "assumptions_keys": [], "status": "complete",
-            },
-            {
-                "agent": "Reasoning", "icon": "⚖️", "role": "Reasoning & Scoring Agent",
-                "thought": "I computed the PCVL priority score. Very high propensity (0.92) driven by 98% seat utilization and new champion. Moderate value score (0.75) given current low ARR — but expansion would dramatically increase LTV. Priority score: 6.62.",
-                "output": "Priority = P(0.92) × C(0.80) × V(0.75) × L(12) = 6.62\nRecommended: Propose Enterprise Upgrade Plan",
-                "assumptions_keys": [], "status": "complete",
-            },
-            {
-                "agent": "Explainability", "icon": "💬", "role": "Explainability Agent",
-                "thought": "I generated the rationale citing the Account Expansion Playbook. Confidence (0.94) is very high — no uncertainty warnings needed. The explanation is clear and direct for the CSM to act on.",
-                "output": "Explanation generated · Confidence: 0.94 · No warnings triggered",
-                "assumptions_keys": [], "status": "complete",
-            },
-            {
-                "agent": "HITL Gate", "icon": "🛑", "role": "Human-in-the-Loop Interrupt",
-                "thought": "Orchestration complete. CSM approval required before triggering the enterprise upgrade outreach sequence. High confidence but human oversight is mandatory.",
-                "output": "Status: pending_review · Awaiting CSM decision",
-                "assumptions_keys": [], "status": "waiting",
-            },
-        ],
-        "memory_diff": None,
-    },
+def api_health() -> bool:
+    try:
+        r = requests.get(f"{BACKEND}/health", timeout=1.5)
+        return r.status_code == 200
+    except Exception:
+        return False
 
-    "🟡  Initech Co — Low Confidence": {
-        "case_id": "PULSE-2024-INITECH-303",
-        "raw_input": (
-            "Initech Co shows fluctuating API usage. A junior support ticket mentions they might be "
-            "migrating to a competitor, but the customer contact hasn't responded. No executive "
-            "sponsor listed."
-        ),
-        "customer_profile": {
-            "name": "Initech Co", "contract_type": "Enterprise",
-            "contract_value": "$50,000 ARR", "tenure_months": 12,
-            "active_users": 12, "health_score": 60,
-        },
-        "assumptions": {
-            "contract_type": {
-                "value": "Enterprise",
-                "description": "Assumed Enterprise based on historical ticket priority. No contract data in CRM.",
-                "agent": "Ingestion",
-                "type": "select",
-                "options": ["Enterprise (Annual)", "Enterprise (Monthly)", "Self-Serve (Monthly)", "SMB"],
-            },
-            "decision_maker_active": {
-                "value": "No",
-                "description": "Inferred inactive because no executive sponsor is listed in CRM. Unverified.",
-                "agent": "Ingestion",
-                "type": "radio",
-                "options": ["Yes", "No"],
-            },
-        },
-        "retrieved_evidence": [
-            {
-                "text": "If customer migration is suspected but unconfirmed, schedule High-Touch Outreach. Do not automate emails.",
-                "source": "Competitor Defeat Playbook",
-                "score": 0.65,
-            },
-        ],
-        "recommendation": {
-            "action": "Trigger High-Touch Outreach Call",
-            "propensity": 0.45, "context": 0.65, "value": 0.40,
-            "levers": "No discount. Assign senior CSM to call directly.",
-            "priority": 1.17, "confidence": 0.35,
-        },
-        "explanation": (
-            "The model recommends a High-Touch Outreach Call for Initech Co. "
-            "Low confidence (0.35) — recommend human judgment over automation. "
-            "The Competitor Defeat Playbook (relevance 0.65) advises against automated outreach when "
-            "migration is suspected but unconfirmed. Two key profile fields (contract_type, decision_maker_active) "
-            "remain unverified assumptions, significantly reducing model certainty."
-        ),
-        "agent_thoughts": [
-            {
-                "agent": "Planner", "icon": "🧭", "role": "Orchestration Planner",
-                "thought": "The input signal is ambiguous — potential competitor migration mentioned but unconfirmed, no executive contact identified. I routed conservatively: Ingestion to extract what we know, Retrieval to find competitor-defeat playbooks, Reasoning to assess whether we have enough signal to recommend action confidently.",
-                "output": "Routing sequence: Ingestion → Retrieval → Reasoning → Explainability → [HITL Gate]",
-                "assumptions_keys": [], "status": "complete",
-            },
-            {
-                "agent": "Ingestion", "icon": "📥", "role": "Data Ingestion Agent",
-                "thought": "I extracted limited profile data — only 12 active users and no executive sponsor listed. I had to infer 2 critical fields that are absent from the CRM: contract_type and decision_maker_active. These are high-uncertainty inferences that need human correction.",
-                "output": "Sparse profile: Initech Co · 12 active users · Health: 60/100\n⚠ 2 assumptions flagged (HIGH UNCERTAINTY): contract_type, decision_maker_active",
-                "assumptions_keys": ["contract_type", "decision_maker_active"], "status": "complete",
-            },
-            {
-                "agent": "Retrieval", "icon": "🔍", "role": "Knowledge Retrieval Agent",
-                "thought": "I found 1 relevant playbook chunk with a relevance score of 0.65 — below our high-confidence threshold of 0.80. The match is directionally correct but weak. This contributes to the overall low confidence in the recommendation.",
-                "output": "Retrieved 1 chunk · Score: 0.65 (weak) · Source: Competitor Defeat Playbook",
-                "assumptions_keys": [], "status": "complete",
-            },
-            {
-                "agent": "Reasoning", "icon": "⚖️", "role": "Reasoning & Scoring Agent",
-                "thought": "PCVL scoring returned weak numbers across all dimensions. Low propensity (0.45) because migration signal is unconfirmed. Low value score (0.40) because decision-maker is assumed inactive. Priority score of 1.17 is the lowest of all processed cases. Model confidence: 0.35 — well below the human-review threshold.",
-                "output": "Priority = P(0.45) × C(0.65) × V(0.40) × L(10) = 1.17\n⚠ Confidence: 0.35 — below threshold · Human judgment strongly recommended",
-                "assumptions_keys": [], "status": "complete",
-            },
-            {
-                "agent": "Explainability", "icon": "💬", "role": "Explainability Agent",
-                "thought": "I detected that confidence (0.35) is below the 0.5 threshold. Per protocol, I appended a mandatory human-judgment warning to the explanation. The rationale cites the Competitor Defeat Playbook but explicitly flags that two key assumptions are unverified.",
-                "output": "Explanation generated · ⚠ LOW CONFIDENCE WARNING inserted · Unverified assumptions cited",
-                "assumptions_keys": [], "status": "complete",
-            },
-            {
-                "agent": "HITL Gate", "icon": "🛑", "role": "Human-in-the-Loop Interrupt",
-                "thought": "Execution halted — low confidence case. This recommendation MUST NOT be auto-executed. CSM intervention is required. Correction of the 2 flagged assumptions in the Ingestion node will significantly improve model certainty.",
-                "output": "Status: pending_review · ⚠ Low confidence — human decision mandatory",
-                "assumptions_keys": [], "status": "waiting",
-            },
-        ],
-        "memory_diff": None,
-    },
+def api_process(raw_input: str) -> dict:
+    r = requests.post(f"{BACKEND}/process", json={"raw_input": raw_input}, timeout=30)
+    r.raise_for_status()
+    return r.json()
+
+def api_resume(thread_id: str, decision: str, edit_payload: dict = None) -> dict:
+    body = {"thread_id": thread_id, "decision": decision}
+    if edit_payload:
+        body["edit_payload"] = edit_payload
+    r = requests.post(f"{BACKEND}/resume", json=body, timeout=30)
+    r.raise_for_status()
+    return r.json()
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  DEMO PRESETS  — raw CRM text only, no fake response data
+# ─────────────────────────────────────────────────────────────────────────────
+PRESETS = {
+    "🔴  ACME Corp — Churn Risk": (
+        "ACME Corp's lead CSM reports that usage of key dashboards has dropped 40% in the last "
+        "30 days. The primary champion VP of Product left the company last week, and they are "
+        "currently on an annual contract renewing in 90 days. Need immediate playbook action."
+    ),
+    "🟢  Globex Inc — Expansion": (
+        "Globex Inc has added 50 new seats this month, hitting 98% utilization. "
+        "The new Director of Customer Experience expressed interest in our premium analytics add-on. "
+        "They are currently on a self-serve monthly plan."
+    ),
+    "🟡  Initech Co — Low Confidence": (
+        "Initech Co shows fluctuating API usage. A junior support ticket mentions they might be "
+        "migrating to a competitor, but the customer contact hasn't responded. No executive "
+        "sponsor listed."
+    ),
 }
+PRESET_KEYS = list(PRESETS.keys())
 
-SCENARIO_KEYS = list(SCENARIOS.keys())
+# ─────────────────────────────────────────────────────────────────────────────
+#  AGENT NODE DEFINITIONS
+# ─────────────────────────────────────────────────────────────────────────────
+AGENT_NODES = [
+    {"agent": "Planner",        "icon": "🧭", "role": "Orchestration Planner"},
+    {"agent": "Ingestion",      "icon": "📥", "role": "Data Ingestion Agent"},
+    {"agent": "Retrieval",      "icon": "🔍", "role": "Knowledge Retrieval Agent"},
+    {"agent": "Reasoning",      "icon": "⚖️",  "role": "Reasoning & Scoring Agent"},
+    {"agent": "Explainability", "icon": "💬", "role": "Explainability Agent"},
+    {"agent": "HITL Gate",      "icon": "🛑", "role": "Human-in-the-Loop Interrupt"},
+]
+
+def get_node_thought(agent: str, plan_trace: list) -> str:
+    for line in (plan_trace or []):
+        if isinstance(line, str) and line.strip().startswith(agent):
+            parts = line.split(":", 1)
+            if len(parts) == 2:
+                return parts[1].strip()
+    return f"{agent} completed its step."
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  SESSION STATE
 # ─────────────────────────────────────────────────────────────────────────────
-if "scenario_name" not in st.session_state:
-    st.session_state.scenario_name = SCENARIO_KEYS[0]
-if "case_data" not in st.session_state:
-    st.session_state.case_data = copy.deepcopy(SCENARIOS[st.session_state.scenario_name])
-if "stage" not in st.session_state:
-    st.session_state.stage = "input"
-if "original_rec" not in st.session_state:
-    st.session_state.original_rec = None
-if "node_edit_open" not in st.session_state:
-    st.session_state.node_edit_open = {}   # {agent_name: bool}
+def _defaults():
+    defaults = {
+        "preset":       PRESET_KEYS[0],
+        "stage":        "input",
+        "api_data":     None,
+        "thread_id":    None,
+        "original_rec": None,
+        "node_edits":   {},
+    }
+    for k, v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
 
+_defaults()
 
-def load_scenario(name: str):
-    st.session_state.scenario_name = name
-    st.session_state.case_data = copy.deepcopy(SCENARIOS[name])
-    st.session_state.stage = "input"
-    st.session_state.original_rec = None
-    st.session_state.node_edit_open = {}
-
+def reset():
+    for k in ["stage", "api_data", "thread_id", "original_rec", "node_edits"]:
+        if k in st.session_state:
+            del st.session_state[k]
+    _defaults()
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  NAVIGATION HEADER
+#  NAVIGATION BAR
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown("""
+online = api_health()
+if online:
+    status_badge = '<span class="nav-status"><span class="nav-dot" style="background:#1A3D1A;"></span>Backend Connected</span>'
+else:
+    status_badge = '<span class="nav-offline"><span class="nav-dot" style="background:#856404;"></span>Backend Offline</span>'
+
+st.html(f"""
 <div class="pulse-nav">
   <div>
     <div class="pulse-logo-mark">Pulse</div>
@@ -883,505 +406,435 @@ st.markdown("""
     <span class="nav-link">Playbooks</span>
     <span class="nav-link">Memory</span>
     <span class="nav-link">Settings</span>
-    <span class="nav-status"><span class="nav-status-dot"></span>Agent Online</span>
+    {status_badge}
   </div>
 </div>
-""", unsafe_allow_html=True)
+""")
+
+if not online:
+    st.warning("⚠️ FastAPI backend is offline. Start it: `uvicorn api.main:app --port 8000`")
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  SIDEBAR
 # ─────────────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown('<div style="font-family:EB Garamond,serif; font-size:20px; font-weight:600; color:#1A3D1A; margin-bottom:4px;">Case Runner</div>', unsafe_allow_html=True)
-    st.markdown('<div style="font-size:11px; color:#8A8880; margin-bottom:16px;">Select a scenario to analyse</div>', unsafe_allow_html=True)
+    st.html('<div style="font-family:\'EB Garamond\',serif;font-size:20px;font-weight:600;color:#FFFFFF;margin-bottom:4px;">Case Runner</div>')
+    st.html('<div style="font-size:11px;color:#A8C4A8;margin-bottom:16px;">Select a demo scenario</div>')
 
-    selected = st.selectbox(
-        "Scenario",
-        options=SCENARIO_KEYS,
-        index=SCENARIO_KEYS.index(st.session_state.scenario_name),
-        label_visibility="collapsed",
-    )
-    if selected != st.session_state.scenario_name:
-        load_scenario(selected)
+    sel = st.selectbox("Preset", PRESET_KEYS,
+                       index=PRESET_KEYS.index(st.session_state.preset),
+                       label_visibility="collapsed")
+    if sel != st.session_state.preset:
+        st.session_state.preset = sel
+        reset()
         st.rerun()
 
-    profile = st.session_state.case_data["customer_profile"]
-    health  = profile.get("health_score", 50)
-    h_color = "#1A3D1A" if health >= 75 else "#D4A017" if health >= 50 else "#C0392B"
+    data = st.session_state.api_data
+    st.html('<div class="sb-head">Account Profile</div>')
+    if data:
+        profile = data.get("customer_profile") or {}
+        health = profile.get("health_score", 50)
+        if isinstance(health, str):
+            try: health = int(str(health).split("/")[0].strip())
+            except: health = 50
+        health = max(0, min(100, int(health)))
+        hc = "#3FB950" if health >= 75 else "#D4A017" if health >= 50 else "#F85149"
+        rows_html = ""
+        show = {
+            "Company":  profile.get("company_name", "—"),
+            "Segment":  profile.get("segment", "—"),
+            "Contract": profile.get("contract_type", "—"),
+            "Users":    str(profile.get("active_users", "—")),
+            "Health":   f"{health}/100",
+        }
+        for k, v in show.items():
+            color = hc if k == "Health" else "#FFFFFF"
+            rows_html += f'<div class="sb-row"><span style="color:#A8C4A8;font-size:11px;">{k}</span><span style="color:{color};font-weight:600;font-size:12px;">{v}</span></div>'
+        st.html(f'{rows_html}<div class="health-track"><div class="health-fill" style="width:{health}%;background:{hc};"></div></div>')
+    else:
+        st.html('<div style="font-size:11px;color:#A8C4A8;font-style:italic;">No case loaded yet.</div>')
 
-    st.markdown('<div class="sb-section">Active Account</div>', unsafe_allow_html=True)
-    for label, val in [
-        ("Account",   profile["name"]),
-        ("ARR",       profile["contract_value"]),
-        ("Contract",  profile["contract_type"]),
-        ("Tenure",    f"{profile['tenure_months']} months"),
-        ("Users",     str(profile["active_users"])),
-    ]:
-        st.markdown(f'<div class="sb-stat"><span class="sb-stat-label">{label}</span><span class="sb-stat-value">{val}</span></div>', unsafe_allow_html=True)
-
-    st.markdown(f"""
-    <div style="padding: 8px 0 4px;">
-        <div class="sb-stat">
-            <span class="sb-stat-label">Health Score</span>
-            <span class="sb-stat-value" style="color:{h_color};">{health}/100</span>
-        </div>
-        <div class="health-track">
-            <div class="health-fill" style="width:{health}%; background:{h_color};"></div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    stage_map = {
-        "input":     ("chip-pending",  "Awaiting Input"),
-        "review":    ("chip-pending",  "Pending Review"),
-        "edit_mode": ("chip-editing",  "Editing Node"),
-        "edited":    ("chip-editing",  "Re-evaluated"),
-        "approved":  ("chip-approved", "Approved"),
-        "rejected":  ("chip-rejected", "Rejected"),
+    stage_labels = {
+        "input":    ("chip-pending",  "Awaiting Input"),
+        "review":   ("chip-pending",  "Pending Review"),
+        "edited":   ("chip-editing",  "Re-evaluated"),
+        "approved": ("chip-approved", "Approved"),
+        "rejected": ("chip-rejected", "Rejected"),
     }
-    cls, lbl = stage_map.get(st.session_state.stage, ("chip-pending", "Unknown"))
-    st.markdown('<div class="sb-section">Flow State</div>', unsafe_allow_html=True)
-    st.markdown(f'<span class="chip {cls}">{lbl}</span>', unsafe_allow_html=True)
-
+    cls, lbl = stage_labels.get(st.session_state.stage, ("chip-pending", "—"))
+    st.html(f'<div class="sb-head">Flow State</div><span class="chip {cls}">{lbl}</span>')
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  STAGE 1 — INPUT
+#  STAGE: INPUT
 # ─────────────────────────────────────────────────────────────────────────────
 if st.session_state.stage == "input":
-    # Hero
-    st.markdown("""
-    <div class="page-hero">
-        <div class="page-hero-label">Customer Intelligence</div>
-        <div class="page-hero-headline">What is the <em>next best action</em><br>for this account?</div>
-        <div class="page-hero-sub">
-            Paste a CRM note, support transcript, or engagement signal.
-            The AI orchestration layer will route it through specialised agents and surface a
-            recommended action with full reasoning transparency.
-        </div>
+    st.html("""
+    <div style="margin-bottom:48px;">
+      <div class="hero-label">Customer Intelligence</div>
+      <div class="hero-headline">What is the <em>next best action</em><br>for this account?</div>
+      <div class="hero-sub">
+        Paste a CRM note, support transcript, or engagement signal.
+        The orchestration layer routes it through specialised agents
+        and returns a fully reasoned recommendation.
+      </div>
     </div>
-    """, unsafe_allow_html=True)
+    """)
 
     raw = st.text_area(
         "Signal",
-        value=st.session_state.case_data["raw_input"],
+        value=PRESETS[st.session_state.preset],
         height=148,
-        placeholder="Paste CRM note, support ticket, or engagement signal…",
         label_visibility="collapsed",
+        placeholder="Paste CRM note, support ticket, or engagement signal…",
     )
 
     c1, c2 = st.columns([2, 6])
     with c1:
-        go = st.button("⚡  Analyse Case", type="primary", use_container_width=True)
+        go = st.button("⚡  Analyse Case", type="primary",
+                       use_container_width=True, disabled=not online)
     with c2:
-        st.markdown(
-            '<div style="padding-top:10px; font-size:12px; color:#8A8880;">'
-            'Routes through <code style="color:#1A3D1A; background:#E8F0E8; padding:2px 7px; border-radius:4px;">POST /process</code>'
-            ' — LangGraph orchestration · Chroma retrieval · Groq reasoning</div>',
-            unsafe_allow_html=True,
-        )
+        st.html('<div style="padding-top:10px;font-size:12px;color:#8A8880;">Calls <code style="color:#1A3D1A;background:#E8F0E8;padding:2px 7px;border-radius:4px;font-family:\'JetBrains Mono\',monospace;">POST /process</code></div>')
 
     if go:
-        st.session_state.case_data["raw_input"] = raw
         with st.spinner("Running orchestration pipeline…"):
-            time.sleep(1.4)
-        st.session_state.stage = "review"
-        st.rerun()
-
+            try:
+                result = api_process(raw)
+                st.session_state.api_data  = result
+                st.session_state.thread_id = result.get("thread_id")
+                st.session_state.stage     = "review"
+                st.rerun()
+            except Exception as e:
+                st.error(f"Backend error: {e}")
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  STAGE 2+ — REVIEW / EDIT / APPROVE / REJECT
+#  STAGES: REVIEW / EDITED / APPROVED / REJECTED
 # ─────────────────────────────────────────────────────────────────────────────
-elif st.session_state.stage in ["review", "approved", "rejected", "edit_mode", "edited"]:
-    case = st.session_state.case_data
-    rec  = case["recommendation"]
-    conf = rec["confidence"]
+elif st.session_state.stage in ("review", "edited", "approved", "rejected"):
+    data    = st.session_state.api_data or {}
+    rec     = data.get("recommendation") or {}
+    conf    = float(rec.get("confidence", 1.0))
+    profile = data.get("customer_profile") or {}
+    assump  = data.get("assumptions") or {}
+    evid    = data.get("retrieved_evidence") or []
+    expl    = data.get("explanation") or "No explanation generated."
+    trace   = data.get("plan_trace") or []
+    tid     = st.session_state.thread_id or data.get("thread_id", "—")
+    company = profile.get("company_name", "Unknown Account")
+    arr_raw = profile.get("contract_value", "N/A")
+    arr_str = f"${arr_raw:,}" if isinstance(arr_raw, (int, float)) else str(arr_raw)
 
-    # Case identity strip
-    st.markdown(f"""
+    # Case strip
+    st.html(f"""
     <div class="case-strip">
-        <code>{case['case_id']}</code>
-        <span class="case-strip-sep">·</span>
-        <span>{case['customer_profile']['name']}</span>
-        <span class="case-strip-sep">·</span>
-        <span>{case['customer_profile']['contract_value']}</span>
-        <span class="case-strip-sep">·</span>
-        <span style="margin-left:auto; color:#1A3D1A; font-weight:600;">Awaiting CSM decision</span>
+      <span class="case-id">{tid}</span>
+      <span class="case-strip-dot">·</span>
+      <span>{company}</span>
+      <span class="case-strip-dot">·</span>
+      <span>{arr_str}</span>
+      <span class="case-strip-right">Awaiting CSM decision</span>
     </div>
-    """, unsafe_allow_html=True)
-
-    # Memory Diff
-    mem = case.get("memory_diff")
-    if mem:
-        st.markdown(f"""
-        <div class="memory-diff">
-            <div class="memory-diff-label">⟳ Memory Diff — Similar Past Interaction</div>
-            Previously recommended <strong>"{mem['past_recommendation']}"</strong> —
-            the CSM corrected it to <strong>"{mem['human_correction']}"</strong>.
-            <span style="color:#5A7A5A; font-size:12px; display:block; margin-top:4px;">{mem['context']}</span>
-        </div>
-        """, unsafe_allow_html=True)
+    """)
 
     left, right = st.columns([5, 3], gap="large")
 
-    # ── LEFT — Agent Thinking Tree ─────────────────────────────────────────
+    # ── LEFT: Agent Thinking Tree ──────────────────────────────────────────
     with left:
-        st.markdown("""
-        <div style="margin-bottom:20px;">
-            <div class="section-eyebrow">Reasoning Trace</div>
-            <div class="section-heading">How the agents reasoned</div>
-            <div style="font-size:13px; color:#6B6B66; margin-top:4px;">
-                Each node shows what the agent thought, what it produced, and any assumptions you can correct.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.html('<div class="eyebrow">Reasoning Trace</div>')
+        st.html('<div style="font-family:\'EB Garamond\',serif;font-size:24px;font-weight:600;color:#0F0F0E;margin-bottom:4px;">How the agents reasoned</div>')
+        st.html('<div style="font-size:13px;color:#6B6B66;margin-bottom:24px;">Real-time execution trace from the backend orchestration graph.</div>')
 
-        all_assumptions = case.get("assumptions", {})
-        agent_thoughts  = case.get("agent_thoughts", [])
-        total_nodes     = len(agent_thoughts)
+        total = len(AGENT_NODES)
 
-        for idx, node in enumerate(agent_thoughts):
-            is_last    = (idx == total_nodes - 1)
-            is_waiting = node["status"] == "waiting"
-            circle_cls = "final" if is_waiting else "active" if not is_last else "active"
-            node_assumptions = {k: v for k, v in all_assumptions.items() if k in node["assumptions_keys"]}
-            has_assumptions  = bool(node_assumptions)
-            edit_key         = f"edit_open_{node['agent']}"
+        for idx, node_def in enumerate(AGENT_NODES):
+            agent    = node_def["agent"]
+            icon     = node_def["icon"]
+            role     = node_def["role"]
+            is_last  = idx == total - 1
+            is_hitl  = agent == "HITL Gate"
+            circle_bg = "#0F2A0F" if is_hitl else "#1A3D1A"
 
-            if edit_key not in st.session_state.node_edit_open:
-                st.session_state.node_edit_open[edit_key] = False
+            thought = get_node_thought(agent, trace)
 
-            # ── Node HTML ───────────────────────────────────────────────────
-            line_html = "" if is_last else '<div class="agent-node-line"></div>'
-            circle_bg  = "#1A3D1A" if not is_waiting else "#0F2A0F"
-            circle_icon = node["icon"]
+            col_rail, col_content = st.columns([1, 12], gap="small")
 
-            st.markdown(f"""
-            <div class="agent-node">
-              <div class="agent-node-rail">
-                <div class="agent-node-circle" style="background:{circle_bg}; border-color:{circle_bg};">
-                    <span style="font-size:14px;">{circle_icon}</span>
+            with col_rail:
+                line_seg = "" if is_last else '<div style="width:2px;flex:1;min-height:40px;background:linear-gradient(to bottom,#1A3D1A,#C2D4C2);margin:4px auto;"></div>'
+                st.html(f"""
+                <div style="display:flex;flex-direction:column;align-items:center;height:100%;">
+                  <div style="width:36px;height:36px;border-radius:50%;background:{circle_bg};
+                              display:flex;align-items:center;justify-content:center;font-size:16px;
+                              flex-shrink:0;">{icon}</div>
+                  {line_seg}
                 </div>
-                {line_html}
-              </div>
-              <div class="agent-node-content">
-                <div class="agent-node-header">
-                    <div>
-                        <div class="agent-node-name">{node['agent']}</div>
-                        <div class="agent-node-role">{node['role']}</div>
+                """)
+
+            with col_content:
+                # Agent name + role (static strings — safe)
+                st.html(f"""
+                <div class="node-header">
+                  <div class="node-name">{agent}</div>
+                  <div class="node-role">{role}</div>
+                </div>
+                """)
+
+                # Thought card — thought text rendered via st.write (escaped)
+                st.html('<div class="node-thought"><div class="node-thought-lbl">💭 Internal Thought</div><div class="node-thought-txt">')
+                st.write(thought)   # ← st.write escapes all special chars
+                st.html('</div></div>')
+
+                # ── Structured output per agent type ──────────────────────
+                if agent == "Planner":
+                    route_pills = " ➜ ".join([
+                        f'<span class="pill-route">{s}</span>' if s != "HITL Gate"
+                        else f'<span class="pill-hitl">{s}</span>'
+                        for s in ["Ingestion","Retrieval","Reasoning","Explainability","HITL Gate"]
+                    ])
+                    st.html(f'<div class="out-card"><div class="out-title">Routing Decision</div><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">{route_pills}</div></div>')
+
+                elif agent == "Ingestion":
+                    fields = {
+                        "Company":    profile.get("company_name"),
+                        "Segment":    profile.get("segment"),
+                        "Contract":   profile.get("contract_type"),
+                        "Churn Risk": profile.get("churn_risk"),
+                        "Health":     profile.get("health_score"),
+                        "Users":      profile.get("active_users"),
+                        "Licenses":   profile.get("license_count"),
+                    }
+                    rows = "".join(
+                        f'<div class="out-row"><span class="out-row-k">{k}</span><span class="out-row-v">{v}</span></div>'
+                        for k, v in fields.items() if v not in (None, "", "—")
+                    )
+                    st.html(f'<div class="out-card"><div class="out-title">Extracted Profile</div>{rows}</div>')
+
+                    if assump:
+                        tags = "".join(
+                            f'<span class="assumption-tag">⚠ Inferred: {k.replace("_"," ").title()}</span>'
+                            for k in assump
+                        )
+                        st.html(f'<div style="margin:8px 0;">{tags}</div>')
+
+                elif agent == "Retrieval":
+                    if evid:
+                        ev_rows = "".join(
+                            f'<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #EAE6DF;">'
+                            f'<span style="font-size:12px;color:#2A2A25;">{ev.get("source","Unknown")}</span>'
+                            f'<span class="ev-source">Relevance: {float(ev.get("score", ev.get("original_score", 0))):.2f}</span>'
+                            f'</div>'
+                            for ev in evid
+                        )
+                        st.html(f'<div class="out-card"><div class="out-title">Retrieved Chunks</div>{ev_rows}</div>')
+                    else:
+                        st.html('<div class="out-card"><div class="out-title">Retrieved Chunks</div><div style="font-size:12px;color:#8A8880;font-style:italic;">No chunks retrieved.</div></div>')
+
+                elif agent == "Reasoning":
+                    p   = float(rec.get("propensity", 0.0))
+                    cv  = float(rec.get("context", 0.0))
+                    v   = float(rec.get("value", 0.0))
+                    pri = float(rec.get("priority", p * cv * v * 10))
+                    st.html(f"""
+                    <div class="out-card">
+                      <div class="out-title">PCVL Scores</div>
+                      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                        <span class="pill-score"><span style="color:#8A8880;">Propensity</span><strong style="color:#1A3D1A;">{p:.2f}</strong></span>
+                        <span class="pill-score"><span style="color:#8A8880;">Context</span><strong style="color:#1A4060;">{cv:.2f}</strong></span>
+                        <span class="pill-score"><span style="color:#8A8880;">Value</span><strong style="color:#5A3080;">{v:.2f}</strong></span>
+                        <span style="background:#E8F0E8;border:1px solid #A8C4A8;padding:6px 12px;border-radius:8px;font-size:12px;display:inline-flex;gap:6px;">
+                          <span style="color:#1A3D1A;">Priority</span><strong style="color:#1A3D1A;">{pri:.2f}</strong>
+                        </span>
+                      </div>
                     </div>
-                </div>
-                <div class="agent-thought-box">
-                    <div class="agent-thought-label">💭 Internal Reasoning</div>
-                    {node['thought']}
-                </div>
-                <div class="agent-output-box">{node['output']}</div>
-            """, unsafe_allow_html=True)
+                    """)
 
-            # Assumption tags
-            if has_assumptions:
-                tags_html = "".join([
-                    f'<span class="agent-assumption-tag">⚠ {k.replace("_"," ")}</span>'
-                    for k in node_assumptions.keys()
-                ])
-                st.markdown(f'<div style="margin-bottom:8px;">{tags_html}</div>', unsafe_allow_html=True)
+                elif agent == "Explainability":
+                    st.html('<div class="out-card"><div class="out-title">Rationale Draft</div>')
+                    st.write(expl)   # ← escaped
+                    st.html('</div>')
 
-            st.markdown("</div></div>", unsafe_allow_html=True)
+                elif agent == "HITL Gate":
+                    if conf < 0.5:
+                        st.warning("⚠️ **Execution blocked.** Confidence below 0.50. Correct flagged assumptions first.")
+                    else:
+                        st.info("⏸️ **Execution paused.** Awaiting CSM decision.")
 
-            # Inline assumption editor per node
-            if has_assumptions and st.session_state.stage in ["review", "edited"]:
-                toggle_label = "▼ Correct assumptions" if not st.session_state.node_edit_open[edit_key] else "▲ Close editor"
-                col_t, _ = st.columns([2, 5])
-                with col_t:
-                    if st.button(toggle_label, key=f"toggle_{node['agent']}"):
-                        st.session_state.node_edit_open[edit_key] = not st.session_state.node_edit_open[edit_key]
+                # ── Assumption editor — only for Ingestion ─────────────────
+                if agent == "Ingestion" and assump and st.session_state.stage in ("review", "edited"):
+                    edit_key = "open_Ingestion"
+                    if edit_key not in st.session_state.node_edits:
+                        st.session_state.node_edits[edit_key] = False
+
+                    btn_lbl = "▼ Correct inferred assumptions" if not st.session_state.node_edits[edit_key] else "▲ Close"
+                    if st.button(btn_lbl, key="toggle_ingestion"):
+                        st.session_state.node_edits[edit_key] = not st.session_state.node_edits[edit_key]
                         st.rerun()
 
-                if st.session_state.node_edit_open[edit_key]:
-                    st.markdown(f"""
-                    <div style="margin: 0 0 8px 44px; background:#FFFDF5; border:1px solid #E6C870;
-                                border-radius:10px; padding:18px 20px;">
-                        <div style="font-size:10px; font-weight:700; letter-spacing:0.12em;
-                                    text-transform:uppercase; color:#8A6A00; margin-bottom:14px;">
-                            ✏ Edit {node['agent']} Assumptions
-                        </div>
-                    """, unsafe_allow_html=True)
+                    if st.session_state.node_edits[edit_key]:
+                        st.html('<div class="assume-box"><div class="assume-box-title">✏ Correct Inferred Assumptions</div></div>')
 
-                    edited_vals = {}
-                    for k, meta in node_assumptions.items():
-                        st.markdown(f"""
-                        <div style="font-size:11px; color:#6B6B66; margin-bottom:6px;">
-                            <b style="color:#0F0F0E;">{k.replace('_',' ').title()}</b>
-                            — {meta['description']}
-                        </div>
-                        """, unsafe_allow_html=True)
-
-                        if meta["type"] == "select":
-                            edited_vals[k] = st.selectbox(
-                                f"Value for {k}",
-                                options=meta["options"],
-                                index=meta["options"].index(meta["value"]) if meta["value"] in meta["options"] else 0,
-                                key=f"val_{node['agent']}_{k}",
-                                label_visibility="collapsed",
-                            )
-                        elif meta["type"] == "radio":
-                            edited_vals[k] = st.radio(
-                                f"Value for {k}",
-                                options=meta["options"],
-                                index=meta["options"].index(meta["value"]) if meta["value"] in meta["options"] else 0,
-                                key=f"val_{node['agent']}_{k}",
-                                horizontal=True,
-                                label_visibility="collapsed",
-                            )
-                        else:
-                            edited_vals[k] = st.text_input(
-                                f"Value for {k}",
-                                value=meta["value"],
-                                key=f"val_{node['agent']}_{k}",
-                                label_visibility="collapsed",
-                            )
-
-                    st.markdown("</div>", unsafe_allow_html=True)
-                    st.write("")
-
-                    col_s, col_c, _ = st.columns([2, 2, 4])
-                    with col_s:
-                        if st.button(f"🔄 Resubmit via {node['agent']}", type="primary", key=f"submit_{node['agent']}"):
-                            st.session_state.original_rec = copy.deepcopy(rec)
-
-                            # Apply edits to profile and assumptions
-                            for k, v in edited_vals.items():
-                                st.session_state.case_data["customer_profile"][k] = v
-                                if k in st.session_state.case_data["assumptions"]:
-                                    del st.session_state.case_data["assumptions"][k]
-                                # Also remove from agent_thoughts assumptions_keys
-                                for n in st.session_state.case_data["agent_thoughts"]:
-                                    if k in n["assumptions_keys"]:
-                                        n["assumptions_keys"].remove(k)
-
-                            with st.spinner(f"Re-routing from {node['agent']} → Reasoning → Explainability…"):
-                                time.sleep(1.0)
-
-                            # Mock recalculation
-                            r = st.session_state.case_data["recommendation"]
-                            if "ACME" in st.session_state.scenario_name:
-                                r["action"]     = "Propose Enterprise Upgrade Plan"
-                                r["propensity"] = 0.95
-                                r["context"]    = 0.85
-                                r["confidence"] = 0.95
-                                r["priority"]   = 7.26
-                                st.session_state.case_data["explanation"] = (
-                                    "Following human correction confirming the Enterprise contract and 90-day renewal, "
-                                    "the Reasoning Agent recomputed PCVL. New recommendation: Propose Enterprise Upgrade "
-                                    "Plan with a 15% promotional incentive. Confidence elevated to 0.95."
-                                )
-                                # Update HITL Gate node thought
-                                for n in st.session_state.case_data["agent_thoughts"]:
-                                    if n["agent"] == "Reasoning":
-                                        n["output"] = "Priority = P(0.95) × C(0.85) × V(0.90) × L(10) = 7.26\nRe-recommended: Propose Enterprise Upgrade Plan"
-                                    if n["agent"] == "Explainability":
-                                        n["output"] = "Re-generated explanation · Confidence: 0.95 · No warnings"
+                        edited_vals = {}
+                        for field_name, reason in assump.items():
+                            display = field_name.replace("_", " ").title()
+                            st.markdown(f"**{display}**")
+                            st.caption(str(reason))
+                            fl = field_name.lower()
+                            if "segment" in fl:
+                                edited_vals[field_name] = st.selectbox(display, ["Enterprise","Mid-Market","SMB"], key=f"ed_{field_name}", label_visibility="collapsed")
+                            elif "contract" in fl:
+                                edited_vals[field_name] = st.selectbox(display, ["Annual","Monthly","Multi-year"], key=f"ed_{field_name}", label_visibility="collapsed")
+                            elif "churn" in fl:
+                                edited_vals[field_name] = st.radio(display, ["High","Medium","Low"], horizontal=True, key=f"ed_{field_name}", label_visibility="collapsed")
+                            elif "health" in fl:
+                                edited_vals[field_name] = st.slider(display, 0, 100, int(profile.get("health_score", 50)), key=f"ed_{field_name}", label_visibility="collapsed")
                             else:
-                                r["confidence"] = min(r["confidence"] + 0.15, 1.0)
-                                r["propensity"] = min(r["propensity"] + 0.10, 1.0)
-                                st.session_state.case_data["explanation"] = (
-                                    "Recommendation updated following correction of flagged assumptions. "
-                                    "Confidence improved with verified profile data."
-                                )
+                                edited_vals[field_name] = st.text_input(display, value=str(profile.get(field_name, "")), key=f"ed_{field_name}", label_visibility="collapsed")
+                            st.write("")
 
-                            st.session_state.node_edit_open[edit_key] = False
-                            st.session_state.stage = "edited"
-                            st.rerun()
+                        cs, cc, _ = st.columns([3, 2, 4])
+                        with cs:
+                            if st.button("🔄 Re-evaluate", type="primary", key="submit_ingestion"):
+                                st.session_state.original_rec = copy.deepcopy(rec)
+                                with st.spinner("Re-routing via Reasoning → Explainability…"):
+                                    try:
+                                        result = api_resume(tid, "edit", edited_vals)
+                                        updated = dict(st.session_state.api_data)
+                                        updated["customer_profile"] = result.get("customer_profile", profile)
+                                        updated["assumptions"]      = result.get("assumptions", {})
+                                        updated["explanation"]      = result.get("explanation", expl)
+                                        updated["plan_trace"]       = result.get("plan_trace", trace)
+                                        updated["recommendation"]   = result.get("corrected_recommendation", rec)
+                                        st.session_state.api_data = updated
+                                        st.session_state.node_edits[edit_key] = False
+                                        st.session_state.stage = "edited"
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"Resume error: {e}")
+                        with cc:
+                            if st.button("Cancel", key="cancel_ingestion"):
+                                st.session_state.node_edits[edit_key] = False
+                                st.rerun()
 
-                    with col_c:
-                        if st.button("Cancel", key=f"cancel_{node['agent']}"):
-                            st.session_state.node_edit_open[edit_key] = False
-                            st.rerun()
+            st.html('<hr style="border:none;border-top:1px solid #D4CFC6;margin:20px 0;">')
 
-            st.markdown('<hr class="rule">', unsafe_allow_html=True)
-
-        # Before / After comparison
+        # Before/After after edit
         if st.session_state.stage == "edited" and st.session_state.original_rec:
-            orig = st.session_state.original_rec
-            priority_new = rec["propensity"] * rec["context"] * rec["value"] * 10
-            st.markdown("""
-            <div style="margin: 8px 0 16px;">
-                <div class="section-eyebrow">Edit Result</div>
-                <div class="section-heading">Before vs After</div>
-            </div>
-            """, unsafe_allow_html=True)
+            orig  = st.session_state.original_rec
+            p_new = float(rec.get("propensity",0)) * float(rec.get("context",0)) * float(rec.get("value",0)) * 10
+            p_old = float(orig.get("priority", float(orig.get("propensity",0)) * float(orig.get("context",0)) * float(orig.get("value",0)) * 10))
+            st.html('<div class="eyebrow">Edit Result</div>')
+            st.html('<div style="font-family:\'EB Garamond\',serif;font-size:22px;font-weight:600;color:#0F0F0E;margin-bottom:12px;">Before vs After</div>')
             ca, cb = st.columns(2, gap="medium")
             with ca:
-                st.markdown(f"""
-                <div class="cmp-before">
-                    <div class="cmp-label">Before Edit</div>
-                    <div class="cmp-action">{orig['action']}</div>
-                    <div class="cmp-stats">
-                        Confidence &nbsp;<strong style="color:#C0392B">{orig['confidence']:.2f}</strong><br>
-                        Priority &nbsp;<strong style="color:#C0392B">{orig['priority']:.2f}</strong>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
+                st.html(f'<div class="cmp-before"><div class="cmp-label" style="color:#C0392B;">Before Edit</div><div class="cmp-action" style="color:#C0392B;">{orig.get("action","—")}</div><div style="font-size:12px;color:#6B6B66;margin-top:8px;line-height:1.8;">Confidence <strong style="color:#C0392B">{float(orig.get("confidence",0)):.2f}</strong><br>Priority <strong style="color:#C0392B">{p_old:.2f}</strong></div></div>')
             with cb:
-                st.markdown(f"""
-                <div class="cmp-after">
-                    <div class="cmp-label">After Edit</div>
-                    <div class="cmp-action">{rec['action']}</div>
-                    <div class="cmp-stats">
-                        Confidence &nbsp;<strong style="color:#1A3D1A">{rec['confidence']:.2f}</strong><br>
-                        Priority &nbsp;<strong style="color:#1A3D1A">{priority_new:.2f}</strong>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-            st.write("")
+                st.html(f'<div class="cmp-after"><div class="cmp-label" style="color:#1A3D1A;">After Edit</div><div class="cmp-action" style="color:#1A3D1A;">{rec.get("action","—")}</div><div style="font-size:12px;color:#6B6B66;margin-top:8px;line-height:1.8;">Confidence <strong style="color:#1A3D1A">{conf:.2f}</strong><br>Priority <strong style="color:#1A3D1A">{p_new:.2f}</strong></div></div>')
 
-    # ── RIGHT — Recommendation + Actions ─────────────────────────────────
+    # ── RIGHT: Recommendation Card ──────────────────────────────────────────
     with right:
-        priority_val = rec["propensity"] * rec["context"] * rec["value"] * 10
+        p   = float(rec.get("propensity", 0.0))
+        cv  = float(rec.get("context", 0.0))
+        v   = float(rec.get("value", 0.0))
+        pri = float(rec.get("priority", p * cv * v * 10))
+        mc  = "#1A3D1A" if conf >= 0.5 else "#D4A017"
+        pct = conf * 100
 
         if conf >= 0.5:
-            badge_html  = f'<span class="badge-high"><span class="badge-dot-green"></span>High Confidence · {conf:.2f}</span>'
-            meter_color = "#1A3D1A"
+            badge_html = f'<span class="badge-high"><span class="badge-dot" style="background:#1A3D1A;"></span>High Confidence · {conf:.2f}</span>'
         else:
-            badge_html  = f'<span class="badge-low"><span class="badge-dot-amber"></span>Low Confidence · {conf:.2f} — Human Review Required</span>'
-            meter_color = "#D4A017"
+            badge_html = f'<span class="badge-low"><span class="badge-dot" style="background:#D4A017;"></span>Low Confidence · {conf:.2f} — Human Review Required</span>'
 
-        st.markdown(f"""
+        st.html(f"""
         <div class="rec-card">
-            <div class="section-eyebrow" style="margin-bottom:6px;">Recommended Action</div>
-            <div style="font-family:'EB Garamond',serif; font-size:28px; font-weight:600;
-                        color:#0F0F0E; line-height:1.15; margin-bottom:12px;">
-                {rec['action']}
-            </div>
-            {badge_html}
-
-            <!-- Confidence Meter -->
-            <div style="margin-top:14px; margin-bottom:4px;">
-                <div style="display:flex; justify-content:space-between; font-size:10px; color:#8A8880; margin-bottom:4px;">
-                    <span>CONFIDENCE</span><span>{conf*100:.0f}%</span>
-                </div>
-                <div class="conf-track">
-                    <div class="conf-fill" style="width:{conf*100}%; background:{meter_color};"></div>
-                </div>
-            </div>
+          <div class="eyebrow">Recommended Action</div>
+          <div class="rec-action">{rec.get("action","No recommendation generated")}</div>
+          {badge_html}
+          <div class="conf-row"><span>CONFIDENCE</span><span>{pct:.0f}%</span></div>
+          <div class="conf-track"><div class="conf-fill" style="width:{pct}%;background:{mc};"></div></div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
 
-        # PCVL Tiles
-        st.markdown('<div class="section-eyebrow">PCVL Scoring — Visible Math</div>', unsafe_allow_html=True)
-        st.markdown(f"""
-        <div class="pcvl-row">
-            <div class="pcvl-tile">
-                <div class="pcvl-tile-label">Propensity</div>
-                <div class="pcvl-tile-value pcvl-g">{rec['propensity']:.2f}</div>
-                <div class="pcvl-tile-sub">likelihood</div>
-            </div>
-            <div class="pcvl-tile">
-                <div class="pcvl-tile-label">Context</div>
-                <div class="pcvl-tile-value pcvl-b">{rec['context']:.2f}</div>
-                <div class="pcvl-tile-sub">relevance</div>
-            </div>
-            <div class="pcvl-tile">
-                <div class="pcvl-tile-label">Value</div>
-                <div class="pcvl-tile-value pcvl-p">{rec['value']:.2f}</div>
-                <div class="pcvl-tile-sub">account LTV</div>
-            </div>
-            <div class="pcvl-tile" style="border-color:#C2D4C2; background:#F0F7F0;">
-                <div class="pcvl-tile-label">Priority</div>
-                <div class="pcvl-tile-value pcvl-k">{priority_val:.2f}</div>
-                <div class="pcvl-tile-sub">P×C×V×L</div>
-            </div>
+        st.html('<div class="eyebrow">PCVL Scoring</div>')
+        st.html(f"""
+        <div class="pcvl-grid">
+          <div class="pcvl-tile"><div class="pcvl-label">Propensity</div><div class="pcvl-value" style="color:#1A3D1A;">{p:.2f}</div><div class="pcvl-sub">likelihood</div></div>
+          <div class="pcvl-tile"><div class="pcvl-label">Context</div><div class="pcvl-value" style="color:#1A4060;">{cv:.2f}</div><div class="pcvl-sub">relevance</div></div>
+          <div class="pcvl-tile"><div class="pcvl-label">Value</div><div class="pcvl-value" style="color:#5A3080;">{v:.2f}</div><div class="pcvl-sub">account LTV</div></div>
+          <div class="pcvl-tile pcvl-tile-hi"><div class="pcvl-label">Priority</div><div class="pcvl-value" style="color:#0F0F0E;">{pri:.2f}</div><div class="pcvl-sub">P×C×V×L</div></div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
 
-        # Explanation
-        st.markdown(f'<div class="explanation-quote">"{case["explanation"]}"</div>', unsafe_allow_html=True)
+        # Explanation — st.write inside a container so text is safe
+        st.html('<div class="expl-quote">')
+        st.write(expl)
+        st.html('</div>')
 
-        # Levers
-        st.markdown(f'<div class="lever-pill">⚙ {rec["levers"]}</div>', unsafe_allow_html=True)
+        levers = rec.get("levers")
+        if levers:
+            st.html(f'<div class="lever-pill">⚙ {levers}</div>')
 
-        st.markdown('<hr class="rule">', unsafe_allow_html=True)
+        st.html('<hr style="border:none;border-top:1px solid #D4CFC6;margin:24px 0;">')
 
-        # Evidence
-        st.markdown('<div class="section-eyebrow">Retrieved Evidence</div>', unsafe_allow_html=True)
-        for ev in case.get("retrieved_evidence", []):
-            pct = int(ev["score"] * 100)
-            st.markdown(f"""
-            <div class="ev-card">
-                <div class="ev-text">"{ev['text']}"</div>
-                <div class="ev-footer">
-                    <span class="ev-source">{ev['source']}</span>
-                    <div class="ev-score-bar">
-                        <div class="ev-score-track">
-                            <div class="ev-score-fill" style="width:{pct}%;"></div>
-                        </div>
-                        <span class="ev-score-num">{ev['score']:.2f}</span>
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+        st.html('<div class="eyebrow">Retrieved Evidence</div>')
+        if evid:
+            for ev in evid:
+                score  = float(ev.get("score", ev.get("original_score", 0.0)))
+                source = ev.get("source", "Unknown")
+                text   = ev.get("text", "")
+                pct_ev = int(min(score, 1.0) * 100)
+                st.html(f'<div class="ev-wrap"><div class="ev-row"><span class="ev-source">{source}</span><span class="ev-score">{score:.2f}</span></div><div class="ev-bar-track"><div class="ev-bar-fill" style="width:{pct_ev}%;"></div></div></div>')
+                # Render text safely
+                st.write(f'*"{text}"*')
+        else:
+            st.html('<div style="font-size:12px;color:#8A8880;font-style:italic;">No evidence chunks retrieved.</div>')
 
-        st.markdown('<hr class="rule">', unsafe_allow_html=True)
+        st.html('<hr style="border:none;border-top:1px solid #D4CFC6;margin:24px 0;">')
 
-        # HITL Action Buttons
-        if st.session_state.stage in ["review", "edited"]:
-            st.markdown('<div class="section-eyebrow" style="margin-bottom:10px;">CSM Decision — HITL Gate</div>', unsafe_allow_html=True)
+        # HITL Gate buttons
+        if st.session_state.stage in ("review", "edited"):
+            st.html('<div class="eyebrow" style="margin-bottom:10px;">CSM Decision — HITL Gate</div>')
             b1, b2, b3 = st.columns(3, gap="small")
             with b1:
                 if st.button("✅  Approve", type="primary", use_container_width=True):
+                    with st.spinner("Submitting…"):
+                        try:    api_resume(tid, "approve")
+                        except: pass
                     st.session_state.stage = "approved"
                     st.rerun()
             with b2:
-                if st.button("✏️  Edit Node", use_container_width=True):
-                    # Scroll user to the first node with assumptions
-                    has_any = any(
-                        n.get("assumptions_keys") for n in case.get("agent_thoughts", [])
-                    )
-                    if has_any:
-                        for n in case.get("agent_thoughts", []):
-                            if n.get("assumptions_keys"):
-                                k = f"edit_open_{n['agent']}"
-                                st.session_state.node_edit_open[k] = True
-                                break
+                if st.button("✏️  Edit", use_container_width=True):
+                    st.session_state.node_edits["open_Ingestion"] = True
                     st.rerun()
             with b3:
                 if st.button("❌  Reject", use_container_width=True):
+                    with st.spinner("Submitting…"):
+                        try:    api_resume(tid, "reject")
+                        except: pass
                     st.session_state.stage = "rejected"
                     st.rerun()
 
-        # Approved Banner
         if st.session_state.stage == "approved":
-            st.markdown(f"""
-            <div class="banner banner-approved">
-                <div class="banner-icon">🎉</div>
-                <div>
-                    <div class="banner-title">Action Approved</div>
-                    <div class="banner-sub">
-                        Outbound trigger fired: <em>{rec['action']}</em>.
-                        Decision logged to memory — will influence future similarity-based retrieval.
-                    </div>
-                </div>
+            st.html(f"""
+            <div class="banner-ok">
+              <div style="font-size:26px;">🎉</div>
+              <div>
+                <div class="banner-title" style="color:#1A3D1A;">Action Approved</div>
+                <div class="banner-sub">Outbound trigger fired: <em>{rec.get("action","—")}</em>.<br>Decision logged to memory.</div>
+              </div>
             </div>
-            """, unsafe_allow_html=True)
+            """)
             st.write("")
-            if st.button("→  Analyse another case"):
-                load_scenario(st.session_state.scenario_name)
-                st.rerun()
+            if st.button("→  New case"):
+                reset(); st.rerun()
 
-        # Rejected Banner
         elif st.session_state.stage == "rejected":
-            st.markdown(f"""
-            <div class="banner banner-rejected">
-                <div class="banner-icon">🚫</div>
-                <div>
-                    <div class="banner-title">Action Rejected</div>
-                    <div class="banner-sub">
-                        CSM override recorded and logged. This rejection will be stored in memory
-                        and will inform future recommendations for similar cases.
-                    </div>
-                </div>
+            st.html(f"""
+            <div class="banner-no">
+              <div style="font-size:26px;">🚫</div>
+              <div>
+                <div class="banner-title" style="color:#B03020;">Action Rejected</div>
+                <div class="banner-sub">CSM override recorded. Will inform future cases.</div>
+              </div>
             </div>
-            """, unsafe_allow_html=True)
+            """)
             st.write("")
-            if st.button("→  Analyse another case"):
-                load_scenario(st.session_state.scenario_name)
-                st.rerun()
+            if st.button("→  New case"):
+                reset(); st.rerun()
