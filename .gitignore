@@ -4,6 +4,6 @@ __pycache__/
 *.pyc
 .venv/
 venv/
-chroma_store/*.sqlite3
+chroma_store/
 *.db
 .DS_Store
