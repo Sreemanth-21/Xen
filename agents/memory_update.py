@@ -14,15 +14,19 @@ def memory_update_node(state: PulseState) -> dict[str, Any]:
     status = state.get("status", "executed")
     
     company_name = customer_profile.get("company_name", "Unknown Company")
+    churn_risk = customer_profile.get("churn_risk", "Unknown")
+    segment = customer_profile.get("segment", "Unknown")
     action = recommendation.get("action", "No action")
     priority = float(recommendation.get("priority", 0.0))
     confidence = float(recommendation.get("confidence", 0.0))
     
-    # 2. Build short natural-language summary string
+    # 2. Build natural-language summary string — must include segment and churn_risk
+    # so that find_similar_past_cases() queries (which use those fields) can match against
+    # embedded text in this record during similarity search.
     summary_text = (
-        f"For company {company_name}, the recommended action '{action}' was "
-        f"{status} by human reviewer. The recommendation had a priority score "
-        f"of {priority:.4f} and a confidence score of {confidence:.4f}."
+        f"For {company_name}, a {segment} customer with {churn_risk} churn risk, "
+        f"the recommended action '{action}' was {status} by human reviewer. "
+        f"Priority score: {priority:.4f}, confidence score: {confidence:.4f}."
     )
     
     # 3. Resolve absolute path to Chroma DB store
