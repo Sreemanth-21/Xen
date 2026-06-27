@@ -12,7 +12,12 @@ def reasoning_node(state: PulseState) -> dict[str, Any]:
     assumptions = state.get("assumptions", {})
     
     churn_risk = customer_profile.get("churn_risk", "Medium")
-    health_score = float(customer_profile.get("health_score", 50.0))
+    print(f"DEBUG REASONING: incoming health_score = {customer_profile.get('health_score')} (type: {type(customer_profile.get('health_score'))})", flush=True)
+    try:
+        health_score = float(customer_profile.get("health_score", 50.0))
+    except (ValueError, TypeError) as e:
+        print(f"WARNING: Failed to parse health_score '{customer_profile.get('health_score')}' as float. Error: {e}. Falling back to 50.0.", flush=True)
+        health_score = 50.0
     contract_value = customer_profile.get("contract_value")
     
     # 2. Compute Propensity (0-1)
@@ -46,7 +51,12 @@ def reasoning_node(state: PulseState) -> dict[str, Any]:
     if contract_value is None:
         value = 0.3
     else:
-        value = min(1.0, float(contract_value) / 200000.0)
+        print(f"DEBUG REASONING: incoming contract_value = {contract_value} (type: {type(contract_value)})", flush=True)
+        try:
+            value = min(1.0, float(contract_value) / 200000.0)
+        except (ValueError, TypeError) as e:
+            print(f"WARNING: Failed to parse contract_value '{contract_value}' as float. Error: {e}. Falling back to default (0.3).", flush=True)
+            value = 0.3
         
     # 5. Compute Levers (0-1)
     # Presence of a usable playbook (contains substring "playbook" in source/text case-insensitive).
@@ -95,35 +105,28 @@ def reasoning_node(state: PulseState) -> dict[str, Any]:
     # 8. Compute Confidence Score (0-1)
     # Base confidence scales with context strength
     base_confidence = 0.4 + 0.6 * context
-
-    # Deductions — only penalise fields that materially affect the action decision
-    deduction = 0.0
-
-    # Contract type inferred — affects renewal/discount logic
-    if "contract_type" in assumptions:
-        deduction += 0.10
-
-    # Health score inferred — affects propensity nudge
-    if "health_score" in assumptions:
-        deduction += 0.10
-
-    # Each additional inferred field adds a small penalty
-    for key in assumptions:
-        if key not in ["contract_type", "health_score"]:
-            deduction += 0.05
-
-    # Thin evidence penalty — but only if truly empty
-    if not retrieved_evidence:
-        deduction += 0.20
-    elif context <= 0.10:
-        deduction += 0.10
-
-    # Null contract value — minor penalty, doesn't affect action selection
-    if contract_value is None:
-        deduction += 0.05
-
-    # Floor at 0.25 so real LLM output is never presented as completely worthless
-    confidence = max(0.25, min(1.0, base_confidence - deduction))
+    
+    # Deductions:
+    total_deduction = 0.0
+    
+    # Category 1: Inferred details from assumptions (capped at 0.15 max to prevent flooding)
+    inferred_deduction = 0.0
+    if assumptions:
+        # Standardized minor deduction of 0.05 per inferred assumption
+        inferred_deduction = min(0.15, 0.05 * len(assumptions))
+    total_deduction += inferred_deduction
+            
+    # Category 2: Thin/no evidence penalty (legitimately the strongest signal of uncertainty)
+    if not retrieved_evidence or context <= 0.15:
+        total_deduction += 0.20
+        
+    # Category 3: Contradictory Signals / Ambiguity check (manual review penalty)
+    if action == "Flag for manual review":
+        total_deduction += 0.15
+        
+    # Note: Double-counting for null contract value is removed as it's already in assumptions if inferred
+    
+    confidence = max(0.1, min(1.0, base_confidence - total_deduction))
     
     print(f"Computed reasoning - Priority: {priority:.4f}, Confidence: {confidence:.4f}, Action: '{action}'")
     

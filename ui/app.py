@@ -661,110 +661,157 @@ elif st.session_state.stage in ("review","edited","approved","rejected"):
               </div>
             """)
 
-            if agent == "Planner":
-                pills = ""
-                for i, s in enumerate(actual_route):
-                    if i > 0: pills += '<span class="pill-arrow"> → </span>'
-                    pills += f'<span class="{"pill-hitl" if s=="HITL Gate" else "pill-agent"}">{s}</span>'
-                st.html(f'<div class="data-card"><div class="data-card-title">Actual Routing Sequence</div><div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:4px;">{pills}</div></div>')
+                st.html('<div class="node-thought"><div class="node-thought-lbl">💭 Internal Thought</div><div class="node-thought-txt">')
+                st.write(thought)
+                st.html('</div></div>')
 
-            elif agent == "Ingestion":
-                churn_c = {"High":"#C03030","Medium":"#8A6A00","Low":"#1A4A1A"}
-                fields  = {"Company": profile.get("company_name"), "Segment": profile.get("segment"),
-                           "Contract": profile.get("contract_type"), "Churn Risk": profile.get("churn_risk"),
-                           "Health Score": profile.get("health_score"),
-                           "Active Users": profile.get("active_users"), "Licenses": profile.get("license_count")}
-                rows = ""
-                for k, v_val in fields.items():
-                    if v_val in (None,"","—"): continue
-                    color = churn_c.get(str(v_val),"#1A1A18") if k == "Churn Risk" else "#1A1A18"
-                    rows += f'<div class="data-row"><span class="data-key">{k}</span><span class="data-val" style="color:{color};">{v_val}</span></div>'
-                st.html(f'<div class="data-card"><div class="data-card-title">Extracted Profile</div>{rows}</div>')
-                if assump:
-                    tags = "".join(f'<span class="assumption-tag">⚠ {k.replace("_"," ").title()}</span>' for k in assump)
-                    st.html(f'<div style="margin-top:10px;line-height:2.4;">{tags}</div>')
+                # ── Structured output per agent ────────────────────────────
+                if agent == "Planner":
+                    # Build route pills from ACTUAL route, not hardcoded list
+                    route_pills = " ➜ ".join([
+                        f'<span class="pill-hitl">{s}</span>' if s == "HITL Gate"
+                        else f'<span class="pill-route">{s}</span>'
+                        for s in actual_route
+                    ])
+                    st.html(f'<div class="out-card"><div class="out-title">Actual Routing Sequence</div><div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">{route_pills}</div></div>')
 
-            elif agent == "Retrieval":
-                if evid:
-                    rows = "".join(
-                        f'<div class="data-row">'
-                        f'<span class="data-key" style="font-family:\'JetBrains Mono\',monospace;font-size:11px;">{ev.get("source","—")}</span>'
-                        f'<span class="data-val" style="font-family:\'JetBrains Mono\',monospace;font-size:11px;color:#1A3D1A;">score: {float(ev.get("score",0)):.4f}</span>'
-                        f'</div>'
-                        for ev in evid
-                    )
-                    st.html(f'<div class="data-card"><div class="data-card-title">Retrieved & Time-Decayed Chunks</div>{rows}</div>')
-                else:
-                    st.html('<div class="data-card"><div class="data-card-title">Retrieved Chunks</div><div style="font-size:12px;color:#9A9690;font-style:italic;">No chunks retrieved.</div></div>')
+                elif agent == "Ingestion":
+                    fields = {
+                        "Company":     profile.get("company_name"),
+                        "Segment":     profile.get("segment"),
+                        "Contract":    profile.get("contract_type"),
+                        "Churn Risk":  profile.get("churn_risk"),
+                        "Health Score":profile.get("health_score"),
+                        "Active Users":profile.get("active_users"),
+                        "Licenses":    profile.get("license_count"),
+                    }
+                    # colour-code churn risk value
+                    churn_colors = {"High": "#B03020", "Medium": "#8A6A00", "Low": "#1A3D1A"}
+                    rows = ""
+                    for k, v_val in fields.items():
+                        if v_val in (None, "", "—"):
+                            continue
+                        color = "#0F0F0E"
+                        if k == "Churn Risk":
+                            color = churn_colors.get(str(v_val), "#0F0F0E")
+                        rows += f'<div class="out-row"><span class="out-row-k">{k}</span><span class="out-row-v" style="color:{color};">{v_val}</span></div>'
+                    st.html(f'<div class="out-card"><div class="out-title">Extracted Profile</div>{rows}</div>')
+                    if assump:
+                        tags = "".join(
+                            f'<span class="assumption-tag">⚠ Inferred: {k.replace("_"," ").title()}</span>'
+                            for k in assump
+                        )
+                        st.html(f'<div style="margin:8px 0;line-height:2;">{tags}</div>')
 
-            elif agent == "Reasoning":
-                p, cv, v, lv, pri = (float(rec.get(k,0)) for k in ("propensity","context","value","levers","priority"))
-                pills_html = (
-                    f'<span class="score-pill"><span class="score-key">Propensity</span><span class="score-val" style="color:#1A4A1A;">{p:.4f}</span></span>'
-                    f'<span class="score-pill"><span class="score-key">Context</span><span class="score-val" style="color:#1A3A5A;">{cv:.4f}</span></span>'
-                    f'<span class="score-pill"><span class="score-key">Value</span><span class="score-val" style="color:#4A1A6A;">{v:.4f}</span></span>'
-                    f'<span class="score-pill"><span class="score-key">Levers</span><span class="score-val" style="color:#5A3A1A;">{lv:.4f}</span></span>'
-                    f'<span class="score-pill" style="background:#EAF2EA;border-color:#B8D4B8;"><span class="score-key">Priority</span><span class="score-val" style="color:#1A3D1A;">{pri:.4f}</span></span>'
-                )
-                st.html(f'<div class="data-card"><div class="data-card-title">PCVL Scores</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">{pills_html}</div></div>')
+                elif agent == "Retrieval":
+                    if evid:
+                        ev_rows = "".join(
+                            f'<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #EAE6DF;">'
+                            f'<span style="font-size:12px;color:#2A2A25;font-family:\'JetBrains Mono\',monospace;">{ev.get("source","Unknown")}</span>'
+                            f'<span class="ev-source">Score: {float(ev.get("score",0)):.4f}</span>'
+                            f'</div>'
+                            for ev in evid
+                        )
+                        st.html(f'<div class="out-card"><div class="out-title">Retrieved & Time-Decayed Chunks</div>{ev_rows}</div>')
+                    else:
+                        st.html('<div class="out-card"><div class="out-title">Retrieved Chunks</div><div style="font-size:12px;color:#8A8880;font-style:italic;">No chunks retrieved — check Chroma seed.</div></div>')
 
-            elif agent == "Explainability":
-                st.html('<div class="data-card"><div class="data-card-title">Rationale Draft</div>')
-                st.write(expl)
-                st.html('</div>')
+                elif agent == "Reasoning":
+                    p   = float(rec.get("propensity", 0.0))
+                    cv  = float(rec.get("context",    0.0))
+                    v   = float(rec.get("value",      0.0))
+                    lv  = float(rec.get("levers",     0.0))
+                    pri = float(rec.get("priority",   0.0))
+                    st.html(f"""
+                    <div class="out-card">
+                      <div class="out-title">PCVL Scores</div>
+                      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                        <span class="pill-score"><span style="color:#8A8880;">Propensity</span><strong style="color:#1A3D1A;">{p:.4f}</strong></span>
+                        <span class="pill-score"><span style="color:#8A8880;">Context</span><strong style="color:#1A4060;">{cv:.4f}</strong></span>
+                        <span class="pill-score"><span style="color:#8A8880;">Value</span><strong style="color:#5A3080;">{v:.4f}</strong></span>
+                        <span class="pill-score"><span style="color:#8A8880;">Levers</span><strong style="color:#704020;">{lv:.4f}</strong></span>
+                        <span style="background:#E8F0E8;border:1px solid #A8C4A8;padding:6px 12px;border-radius:8px;font-size:12px;display:inline-flex;gap:6px;">
+                          <span style="color:#1A3D1A;">Priority</span><strong style="color:#1A3D1A;">{pri:.4f}</strong>
+                        </span>
+                      </div>
+                    </div>
+                    """)
 
-            elif agent == "HITL Gate":
-                if conf < 0.5:
-                    st.warning(f"⚠️ **Low confidence ({conf:.2f}).** Correct flagged assumptions before approving.")
-                else:
-                    st.info("⏸️ **Execution paused.** Awaiting CSM decision.")
+                elif agent == "Explainability":
+                    st.html('<div class="out-card"><div class="out-title">Rationale Draft</div>')
+                    st.write(expl)
+                    st.html('</div>')
 
-            st.html('</div>')  # close agent-card
+                elif agent == "HITL Gate":
+                    if conf < 0.5:
+                        st.warning("⚠️ **Low confidence.** Review flagged assumptions before approving.")
+                    else:
+                        st.info("⏸️ **Execution paused.** Awaiting CSM decision.")
 
-            # Assumption editor under Ingestion
-            if agent == "Ingestion" and assump and st.session_state.stage in ("review","edited"):
-                edit_key = "open_Ingestion"
-                if edit_key not in st.session_state.node_edits:
-                    st.session_state.node_edits[edit_key] = False
-                btn_lbl = "▼ Correct inferred assumptions" if not st.session_state.node_edits[edit_key] else "▲ Close editor"
-                if st.button(btn_lbl, key="toggle_ingestion"):
-                    st.session_state.node_edits[edit_key] = not st.session_state.node_edits[edit_key]; st.rerun()
-                if st.session_state.node_edits[edit_key]:
-                    st.html('<div class="assume-box"><div class="assume-box-title">✏ Correct Inferred Assumptions</div></div>')
-                    edited_vals = {}
-                    for field_name, reason in assump.items():
-                        display = field_name.replace("_"," ").title()
-                        st.markdown(f"**{display}**"); st.caption(str(reason))
-                        fl = field_name.lower()
-                        if   "segment"  in fl: edited_vals[field_name] = st.selectbox(display,["Enterprise","Mid-Market","SMB"],key=f"ed_{field_name}",label_visibility="collapsed")
-                        elif "contract" in fl: edited_vals[field_name] = st.selectbox(display,["Annual","Monthly","Multi-year"],key=f"ed_{field_name}",label_visibility="collapsed")
-                        elif "churn"    in fl: edited_vals[field_name] = st.radio(display,["High","Medium","Low"],horizontal=True,key=f"ed_{field_name}",label_visibility="collapsed")
-                        elif "health"   in fl: edited_vals[field_name] = st.slider(display,0,100,int(profile.get("health_score",50)),key=f"ed_{field_name}",label_visibility="collapsed")
-                        else: edited_vals[field_name] = st.text_input(display,value=str(profile.get(field_name,"")),key=f"ed_{field_name}",label_visibility="collapsed")
-                        st.write("")
-                    cs, cc, _ = st.columns([3,2,4])
-                    with cs:
-                        if st.button("🔄 Re-evaluate", type="primary", key="submit_ingestion"):
-                            st.session_state.original_rec = copy.deepcopy(rec)
-                            with st.spinner("Re-routing via Reasoning → Explainability…"):
+                # ── Assumption editor (Ingestion only) ───────────────────
+                if agent == "Ingestion" and assump and st.session_state.stage in ("review", "edited"):
+                    edit_key = "open_Ingestion"
+                    if edit_key not in st.session_state.node_edits:
+                        st.session_state.node_edits[edit_key] = False
+
+                    btn_lbl = "▼ Correct inferred assumptions" if not st.session_state.node_edits[edit_key] else "▲ Close"
+                    if st.button(btn_lbl, key="toggle_ingestion"):
+                        st.session_state.node_edits[edit_key] = not st.session_state.node_edits[edit_key]
+                        st.rerun()
+
+                    if st.session_state.node_edits[edit_key]:
+                        st.html('<div class="assume-box"><div class="assume-box-title">✏ Correct Inferred Assumptions</div></div>')
+                        edited_vals = {}
+                        for field_name, reason in assump.items():
+                            display = field_name.replace("_", " ").title()
+                            st.markdown(f"**{display}**")
+                            st.caption(str(reason))
+                            fl = field_name.lower()
+                            if fl == "segment":
+                                edited_vals[field_name] = st.selectbox(display, ["Enterprise","Mid-Market","SMB"], key=f"ed_{field_name}", label_visibility="collapsed")
+                            elif fl == "contract_type":
+                                edited_vals[field_name] = st.selectbox(display, ["Annual","Monthly","Multi-year"], key=f"ed_{field_name}", label_visibility="collapsed")
+                            elif fl == "contract_value":
                                 try:
-                                    result = api_resume(tid, "edit", edited_vals)
-                                    updated = dict(st.session_state.api_data)
-                                    updated.update({"customer_profile": result.get("customer_profile",profile),
-                                                    "assumptions": result.get("assumptions",{}),
-                                                    "explanation": result.get("explanation",expl),
-                                                    "plan_trace": result.get("plan_trace",trace),
-                                                    "recommendation": result.get("corrected_recommendation",rec)})
-                                    st.session_state.api_data = updated
-                                    st.session_state.node_edits[edit_key] = False
-                                    st.session_state.stage = "edited"; st.rerun()
-                                except Exception as e:
-                                    st.error(f"Resume error: {e}")
-                    with cc:
-                        if st.button("Cancel", key="cancel_ingestion"):
-                            st.session_state.node_edits[edit_key] = False; st.rerun()
+                                    val = float(profile.get("contract_value", 0.0))
+                                except Exception:
+                                    val = 0.0
+                                edited_vals[field_name] = st.number_input(display, value=val, step=1000.0, key=f"ed_{field_name}", label_visibility="collapsed")
+                            elif fl == "churn_risk":
+                                edited_vals[field_name] = st.radio(display, ["High","Medium","Low"], horizontal=True, key=f"ed_{field_name}", label_visibility="collapsed")
+                            elif fl == "health_score":
+                                edited_vals[field_name] = st.slider(display, 0, 100, int(profile.get("health_score", 50)), key=f"ed_{field_name}", label_visibility="collapsed")
+                            else:
+                                edited_vals[field_name] = st.text_input(display, value=str(profile.get(field_name, "")), key=f"ed_{field_name}", label_visibility="collapsed")
+                            st.write("")
 
-        # Before/After
+                        cs, cc, _ = st.columns([3, 2, 4])
+                        with cs:
+                            if st.button("🔄 Re-evaluate", type="primary", key="submit_ingestion"):
+                                st.session_state.original_rec = copy.deepcopy(rec)
+                                with st.spinner("Re-routing via Reasoning → Explainability…"):
+                                    try:
+                                        result = api_resume(tid, "edit", edited_vals)
+                                        updated = dict(st.session_state.api_data)
+                                        updated["customer_profile"] = result.get("customer_profile", profile)
+                                        updated["assumptions"]      = result.get("assumptions", {})
+                                        updated["explanation"]      = result.get("explanation", expl)
+                                        updated["plan_trace"]       = result.get("plan_trace", trace)
+                                        updated["recommendation"]   = result.get("corrected_recommendation", rec)
+                                        st.session_state.api_data = updated
+                                        st.session_state.node_edits[edit_key] = False
+                                        st.session_state.stage = "edited"
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"Resume error: {e}")
+                        with cc:
+                            if st.button("Cancel", key="cancel_ingestion"):
+                                st.session_state.node_edits[edit_key] = False
+                                st.rerun()
+
+            st.html('<hr style="border:none;border-top:1px solid #D4CFC6;margin:20px 0;">')
+
+        # Before/After comparison after edit
         if st.session_state.stage == "edited" and st.session_state.original_rec:
             orig  = st.session_state.original_rec
             p_new = float(rec.get("priority",0)); p_old = float(orig.get("priority",0))

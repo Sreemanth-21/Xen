@@ -97,8 +97,8 @@ def retrieval_node(state: PulseState) -> dict[str, Any]:
             except Exception as pe:
                 print(f"Error parsing timestamp '{timestamp_str}': {pe}")
                 
-        # Time-decay re-ranking score formula: decayed_score = similarity_score * exp(-0.05 * age_in_days)
-        decay_factor = math.exp(-0.05 * age_in_days)
+        # Time-decay re-ranking score formula: decayed_score = similarity_score * exp(-0.01 * age_in_days)
+        decay_factor = math.exp(-0.01 * age_in_days)
         decayed_score = similarity_score * decay_factor
         
         decayed_results.append({
