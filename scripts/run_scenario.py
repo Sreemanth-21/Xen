@@ -49,37 +49,29 @@ def main():
         "human_decision": None
     }
     
-    # Thread config for LangGraph memory checkpointer
-    thread_id = str(uuid.uuid4())
-    config = {"configurable": {"thread_id": thread_id}}
+    # Thread config for LangGraph memory checkpointer using case_id
+    case_id = scenario_data.get("scenario_id", "case_unknown")
+    config = {"configurable": {"thread_id": case_id}}
     
-    print(f"Invoking Pulse LangGraph. thread_id: {thread_id}")
+    print(f"Invoking Pulse LangGraph. thread_id: {case_id}")
     
     try:
         # Run graph until it hits interrupt_before=["execute"]
         final_state = graph.invoke(initial_state, config)
-        print("\n=== GRAPH PAUSED (INTERRUPTED BEFORE EXECUTE) ===")
+        print("\n=== GRAPH PAUSED (INTERRUPTED BEFORE EXECUTE) ===\n")
         
-        print("\n--- PLAN TRACE ---")
+        print("=== RECOMMENDATION ===")
+        pprint.pprint(final_state.get("recommendation", {}))
+        
+        print("\n=== RETRIEVED EVIDENCE ===")
+        pprint.pprint(final_state.get("retrieved_evidence", []))
+        
+        print("\n=== PLAN TRACE ===")
         for step in final_state.get("plan_trace", []):
             print(f"  * {step}")
             
-        print("\n--- CUSTOMER PROFILE ---")
-        pprint.pprint(final_state.get("customer_profile", {}))
-        
-        print("\n--- ASSUMPTIONS ---")
-        pprint.pprint(final_state.get("assumptions", {}))
-        
-        print("\n--- RETRIEVED EVIDENCE (TOP 4 DECAYED) ---")
-        pprint.pprint(final_state.get("retrieved_evidence", []))
-        
-        print("\n--- RECOMMENDATION ---")
-        pprint.pprint(final_state.get("recommendation", {}))
-        
-        print("\n--- EXPLANATION ---")
-        print(final_state.get("explanation", "None"))
-        
-        print(f"\nFinal State Status: {final_state.get('status')}")
+        print("\n=== STATUS ===")
+        print(final_state.get("status"))
         
     except Exception as e:
         print(f"Execution Error: {e}", file=sys.stderr)
