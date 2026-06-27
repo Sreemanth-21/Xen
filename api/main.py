@@ -129,36 +129,23 @@ def memory_diff(company_name: str = Query(..., description="Company name to find
     """
     Queries interaction_history Chroma collection for past decisions
     similar to the current company/case, to power the Memory Diff panel.
+    Uses the find_similar_past_cases function from the Memory Update Agent.
     """
     try:
-        import chromadb
-        script_dir     = os.path.dirname(os.path.abspath(__file__))
-        workspace_root = os.path.dirname(script_dir)
-        chroma_db_path = os.path.join(workspace_root, "chroma_store")
-
-        client      = chromadb.PersistentClient(path=chroma_db_path)
-        collections = [c.name for c in client.list_collections()]
-
-        if "interaction_history" not in collections:
-            return {"results": []}
-
-        collection = client.get_collection(name="interaction_history")
-        if collection.count() == 0:
-            return {"results": []}
-
-        n = min(3, collection.count())
-        results = collection.query(query_texts=[company_name], n_results=n)
+        from agents.memory_update import find_similar_past_cases
+        profile = {"company_name": company_name}
+        past_cases = find_similar_past_cases(profile, k=3)
 
         output = []
-        if results and results.get("metadatas"):
-            for meta in results["metadatas"][0]:
-                output.append({
-                    "company_name":   meta.get("company_name", "—"),
-                    "action":         meta.get("action", "—"),
-                    "human_decision": meta.get("human_decision", "—"),
-                    "outcome":        meta.get("outcome", "—"),
-                    "timestamp":      meta.get("timestamp", "—"),
-                })
+        for case in past_cases:
+            output.append({
+                "company_name":   company_name,
+                "action":         case.get("action", "—"),
+                "human_decision": case.get("decision", "—"),
+                "outcome":        case.get("decision", "—"),
+                "timestamp":      case.get("timestamp", "—"),
+                "summary":        case.get("summary_text", ""),
+            })
         return {"results": output}
     except Exception as e:
         return {"results": [], "error": str(e)}

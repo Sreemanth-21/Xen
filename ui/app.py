@@ -901,14 +901,19 @@ elif st.session_state.stage in ("review", "edited", "approved", "rejected"):
         mem_results = api_memory_diff(company)
         if mem_results:
             for m in mem_results[:3]:
-                past_company  = m.get("company_name", "—")
                 past_action   = m.get("action", "—")
                 past_decision = m.get("human_decision", "—")
-                past_outcome  = m.get("outcome", "—")
+                past_summary  = m.get("summary", "")
+                past_ts       = m.get("timestamp", "—")[:10] if m.get("timestamp") else "—"
+                decision_color = "#1A3D1A" if past_decision == "approved" else "#B03020" if past_decision == "rejected" else "#8A6A00"
                 st.html(f"""
                 <div class="mem-diff">
-                  <strong>{past_company}</strong> · <em>{past_action}</em><br>
-                  Decision: <strong>{past_decision}</strong> · Outcome: {past_outcome}
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <strong style="font-size:13px;">{past_action}</strong>
+                    <span style="font-size:11px;font-weight:700;color:{decision_color};text-transform:uppercase;">{past_decision}</span>
+                  </div>
+                  <div style="font-size:12px;color:#4A6A50;line-height:1.6;">{past_summary}</div>
+                  <div style="font-size:10px;color:#8A8880;margin-top:6px;">{past_ts}</div>
                 </div>
                 """)
         else:
