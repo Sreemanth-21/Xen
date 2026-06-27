@@ -120,7 +120,7 @@ def explainability_node(state: PulseState) -> dict[str, Any]:
                         "content": prompt
                     }
                 ],
-                model="llama3-8b-8192",
+                model="llama-3.3-70b-versatile",
                 temperature=0.3,
                 max_tokens=300,
             )

@@ -73,16 +73,37 @@ def reasoning_node(state: PulseState) -> dict[str, Any]:
     priority = propensity * context * value * levers
     
     # 7. Select Action
-    # Pick based on propensity direction and risk segment
+    # Map churn_risk + health_score signals to meaningful CSM actions
+    active_users   = customer_profile.get("active_users")
+    license_count  = customer_profile.get("license_count")
+
+    # Compute utilisation ratio if both values are available
+    if active_users and license_count and int(license_count) > 0:
+        utilisation = float(active_users) / float(license_count)
+    else:
+        utilisation = None
+
     if churn_risk == "High":
         action = "Schedule retention call"
     elif churn_risk == "Low" and health_score >= 80:
-        action = "Propose upsell"
+        if utilisation is not None and utilisation >= 0.90:
+            action = "Propose upsell"
+        else:
+            action = "Propose upsell"
+    elif churn_risk == "Medium":
+        # Medium risk — differentiate by adoption signal
+        if utilisation is not None and utilisation < 0.60:
+            action = "Launch adoption recovery playbook"
+        elif health_score < 50:
+            action = "Schedule check-in and health review"
+        else:
+            action = "Send proactive success resources"
     else:
-        action = "Flag for manual review"
+        # Low churn but health not strong enough for upsell
+        action = "Send proactive success resources"
         
     # 8. Compute Confidence Score (0-1)
-    # Base confidence scales with context strength:
+    # Base confidence scales with context strength
     base_confidence = 0.4 + 0.6 * context
     
     # Deductions:
