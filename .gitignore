@@ -1,0 +1,9 @@
+.env
+scratch/
+__pycache__/
+*.pyc
+.venv/
+venv/
+chroma_store/*.sqlite3
+*.db
+.DS_Store
