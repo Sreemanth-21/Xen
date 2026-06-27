@@ -102,20 +102,5 @@ def ingestion_node(state: PulseState) -> dict[str, Any]:
             "assumptions": assumptions
         }
     except Exception as e:
-        print(f"Error calling Groq API in Ingestion: {e}. Falling back to default parser.")
-        # Fallback
-        return {
-            "customer_profile": {
-                "company_name": "Error Corp",
-                "contract_value": 0,
-                "contract_type": "Unknown",
-                "health_score": 50,
-                "segment": "Mid-Market",
-                "churn_risk": "Medium",
-                "license_count": 0,
-                "active_users": 0
-            },
-            "assumptions": {
-                "general": "Error parsing LLM response. Defaulted all fields."
-            }
-        }
+        print(f"Error calling Groq API in Ingestion: {e}")
+        raise e

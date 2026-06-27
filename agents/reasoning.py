@@ -100,18 +100,8 @@ def reasoning_node(state: PulseState) -> dict[str, Any]:
             data = json.loads(result_text)
             candidates = data.get("candidates", [])
         except Exception as e:
-            print(f"Error calling Groq API in Reasoning: {e}. Falling back to mock candidates.")
-            candidates = [
-                {
-                    "action": "Engage CSM for Churn Rescue Plan",
-                    "propensity": 6.0,
-                    "context": 7.0,
-                    "value": 8.0,
-                    "levers": 6.5,
-                    "confidence": 0.70,
-                    "source_file": "kb_seat_contraction_v2.md"
-                }
-            ]
+            print(f"Error calling Groq API in Reasoning: {e}")
+            raise e
 
     # Process and compute Priority in code
     processed_candidates = []
