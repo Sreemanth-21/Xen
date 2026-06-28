@@ -80,6 +80,7 @@ Write a 2–4 sentence explanation that:
 2. Cites at least one specific evidence snippet by source name (e.g., "According to [Source Name]...").
 3. Briefly references the key signals driving the recommendation (e.g., usage drop, champion departure).
 4. If confidence is below 0.5, includes the phrase "Low confidence — recommend human judgment over automation."
+5. Do NOT re-state basic account profile facts (such as company segment, contract type, contract value, or active user count) that are already visible in the sidebar UI. Focus strictly on the reasoning, evidence citations, and key risk signals.
 
 Do NOT use bullet points. Write in flowing, professional prose. Be direct and concise.
 """

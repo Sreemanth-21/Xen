@@ -102,3 +102,13 @@ textarea:focus {
 
 /* ── SLIDER ─────────────────────────────────────────────────────────────── */
 [data-testid="stSlider"] > div > div { background: #1A3D1A !important; }
+
+/* ── PREVENT RERUN FADING / FLICKER ─────────────────────────────────────── */
+[data-testid="stAppViewBlockContainer"] {
+  opacity: 1 !important;
+}
+
+[data-stale="true"] {
+  opacity: 1 !important;
+  transition: none !important;
+}

@@ -137,15 +137,14 @@ def memory_diff(company_name: str = Query(..., description="Company name to find
         past_cases = find_similar_past_cases(profile, k=3)
 
         output = []
-        if results and results.get("metadatas"):
-            for meta in results["metadatas"][0]:
-                output.append({
-                    "company_name":   meta.get("company_name", "—"),
-                    "action":         meta.get("action", "—"),
-                    "human_decision": meta.get("decision", "—"),
-                    "outcome":        meta.get("outcome", "—"),
-                    "timestamp":      meta.get("timestamp", "—"),
-                })
+        for case in past_cases:
+            output.append({
+                "company_name":   company_name,
+                "action":         case.get("action", "—"),
+                "human_decision": case.get("decision", "—"),
+                "summary":        case.get("summary_text", "—"),
+                "timestamp":      case.get("timestamp", "—"),
+            })
         return {"results": output}
     except Exception as e:
         return {"results": [], "error": str(e)}
