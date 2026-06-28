@@ -11,5 +11,23 @@
     "active_users": 42,
     "contract_value": 36000
   },
-  "expected_confidence": "low"
+  "expected_confidence": "low",
+  "temporal_velocity": {
+    "current": 55,
+    "30_day_change": -5,
+    "trend": "stable"
+  },
+  "confidence_penalties": [
+    "Contract lock-in clause unverified",
+    "Mixed usage signals (marketing vs sales)"
+  ],
+  "readiness_criteria": {
+    "has_budget_confirmed": false,
+    "has_playbook_match": false,
+    "has_executive_sponsor": false,
+    "has_telemetry_complete": false,
+    "has_remediation_plan": false,
+    "has_contract_alignment": false,
+    "has_csm_alignment": true
+  }
 }

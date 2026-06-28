@@ -51,6 +51,17 @@ def ingestion_node(state: PulseState) -> dict[str, Any]:
                             "churn_risk":     gt.get("churn_risk", "Medium"),
                             "license_count":  gt.get("license_count", 100),
                             "active_users":   gt.get("active_users", 60),
+                            "temporal_velocity": sc.get("temporal_velocity", {"current": gt.get("health_score", 75), "30_day_change": 0, "trend": "stable"}),
+                            "confidence_penalties": sc.get("confidence_penalties", []),
+                            "readiness_criteria": sc.get("readiness_criteria", {
+                                "has_budget_confirmed": True,
+                                "has_playbook_match": True,
+                                "has_executive_sponsor": True,
+                                "has_telemetry_complete": True,
+                                "has_remediation_plan": True,
+                                "has_contract_alignment": True,
+                                "has_csm_alignment": True
+                            }),
                         }
                         # Only flag fields that are genuinely ambiguous in the raw text
                         if sc.get("scenario_id", "").endswith("ambiguous"):
@@ -75,6 +86,17 @@ def ingestion_node(state: PulseState) -> dict[str, Any]:
                 "churn_risk":    "Medium",
                 "license_count": 100,
                 "active_users":  60,
+                "temporal_velocity": {"current": 75, "30_day_change": 0, "trend": "stable"},
+                "confidence_penalties": [],
+                "readiness_criteria": {
+                    "has_budget_confirmed": True,
+                    "has_playbook_match": True,
+                    "has_executive_sponsor": True,
+                    "has_telemetry_complete": True,
+                    "has_remediation_plan": True,
+                    "has_contract_alignment": True,
+                    "has_csm_alignment": True
+                }
             }
             assumptions = {
                 "contract_type": "Inferred Annual based on typical SaaS contract templates.",
@@ -132,6 +154,41 @@ def ingestion_node(state: PulseState) -> dict[str, Any]:
             profile["company_name"] = "Unknown Company"
             assumptions["company_name"] = "Inferred 'Unknown Company' because no name was found in raw input."
             
+        # Enrich profile with scenario keys for velocity, penalties, and readiness
+        if case_id:
+            script_dir     = os.path.dirname(os.path.abspath(__file__))
+            workspace_root = os.path.dirname(script_dir)
+            scenarios_dir  = os.path.join(workspace_root, "data", "scenarios")
+            for fname in os.listdir(scenarios_dir):
+                if not fname.endswith(".json"):
+                    continue
+                fpath = os.path.join(scenarios_dir, fname)
+                try:
+                    with open(fpath, "r", encoding="utf-8") as f:
+                        sc = json.load(f)
+                    if sc.get("scenario_id") == case_id:
+                        profile["temporal_velocity"] = sc.get("temporal_velocity", {})
+                        profile["confidence_penalties"] = sc.get("confidence_penalties", [])
+                        profile["readiness_criteria"] = sc.get("readiness_criteria", {})
+                        break
+                except Exception:
+                    continue
+
+        if "temporal_velocity" not in profile:
+            profile["temporal_velocity"] = {"current": profile.get("health_score", 50), "30_day_change": 0, "trend": "stable"}
+        if "confidence_penalties" not in profile:
+            profile["confidence_penalties"] = []
+        if "readiness_criteria" not in profile:
+            profile["readiness_criteria"] = {
+                "has_budget_confirmed": True,
+                "has_playbook_match": True,
+                "has_executive_sponsor": True,
+                "has_telemetry_complete": True,
+                "has_remediation_plan": True,
+                "has_contract_alignment": True,
+                "has_csm_alignment": True
+            }
+
         return {
             "customer_profile": profile,
             "assumptions": assumptions
