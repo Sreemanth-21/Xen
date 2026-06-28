@@ -488,18 +488,21 @@ def parse_actual_route(plan_trace):
 # ─── SESSION STATE ──────────────────────────────────────────────────────────────
 def _defaults():
     for k, v in {"preset": PRESET_KEYS[0] if PRESET_KEYS else "", "stage": "input",
-                 "api_data": None, "thread_id": None, "original_rec": None, "node_edits": {}}.items():
+                 "api_data": None, "thread_id": None, "original_rec": None, "node_edits": {}, "loading_editor": False}.items():
         if k not in st.session_state: st.session_state[k] = v
 
 _defaults()
 
 def reset():
-    for k in ["stage","api_data","thread_id","original_rec","node_edits"]:
+    for k in ["stage","api_data","thread_id","original_rec","node_edits","loading_editor","mem_results","online"]:
         if k in st.session_state: del st.session_state[k]
     _defaults()
 
 # ─── NAV BAR ────────────────────────────────────────────────────────────────────
-online = api_health()
+if "online" not in st.session_state or st.session_state.stage == "input":
+    st.session_state.online = api_health()
+online = st.session_state.online
+
 status_html = (
     '<span class="nav-status"><span class="nav-dot" style="background:#2A7A2A;"></span>Backend Connected</span>'
     if online else
@@ -612,6 +615,16 @@ elif st.session_state.stage in ("review","edited","approved","rejected"):
     arr_raw = profile.get("contract_value","N/A")
     arr_str = f"${arr_raw:,}" if isinstance(arr_raw,(int,float)) else str(arr_raw)
     actual_route = parse_actual_route(trace)
+
+    # Fetch memory results once and store in session state to prevent redundant DB requests during CSM interactions
+    if "mem_results" not in st.session_state:
+        if st.session_state.get("loading_editor"):
+            with st.spinner("Loading assumption editor…"):
+                st.session_state.mem_results = api_memory_diff(company)
+            st.session_state.loading_editor = False
+        else:
+            st.session_state.mem_results = api_memory_diff(company)
+    mem_results = st.session_state.mem_results
     churn  = profile.get("churn_risk","—")
     risk_c = {"High":"#C03030","Medium":"#8A6A00","Low":"#1A4A1A"}.get(churn,"#6A6A62")
 
@@ -774,6 +787,8 @@ elif st.session_state.stage in ("review","edited","approved","rejected"):
                 btn_lbl = "▼ Correct inferred assumptions" if not st.session_state.node_edits[edit_key] else "▲ Close"
                 if st.button(btn_lbl, key="toggle_ingestion"):
                     st.session_state.node_edits[edit_key] = not st.session_state.node_edits[edit_key]
+                    if st.session_state.node_edits[edit_key]:
+                        st.session_state.loading_editor = True
                     st.rerun()
 
                 if st.session_state.node_edits[edit_key]:
@@ -946,7 +961,6 @@ elif st.session_state.stage in ("review","edited","approved","rejected"):
         st.html('<div class="divider"></div>')
 
         st.html('<div class="eyebrow">Memory — Similar Past Decisions</div>')
-        mem_results = api_memory_diff(company)
         if mem_results:
             for m in mem_results[:3]:
                 past_action   = m.get("action","—")
@@ -980,7 +994,9 @@ elif st.session_state.stage in ("review","edited","approved","rejected"):
                     st.session_state.stage = "approved"; st.rerun()
             with b2:
                 if st.button("✏️  Edit", use_container_width=True):
-                    st.session_state.node_edits["open_Ingestion"] = True; st.rerun()
+                    st.session_state.node_edits["open_Ingestion"] = True
+                    st.session_state.loading_editor = True
+                    st.rerun()
             with b3:
                 if st.button("❌  Reject", use_container_width=True):
                     with st.spinner("Submitting…"):
