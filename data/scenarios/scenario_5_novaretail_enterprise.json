@@ -12,5 +12,24 @@
     "contract_value": 180000
   },
   "expected_confidence": "high",
-  "demo_note": "High-value enterprise churn risk. SLA breach + competitor evaluation + renewal in 20 days. Should trigger 'Schedule retention call' with high priority due to large contract value."
+  "demo_note": "High-value enterprise churn risk. SLA breach + competitor evaluation + renewal in 20 days. Should trigger 'Schedule retention call' with high priority due to large contract value.",
+  "temporal_velocity": {
+    "current": 28,
+    "30_day_change": -32,
+    "trend": "declining"
+  },
+  "confidence_penalties": [
+    "SLA breach of uptime",
+    "Expiring Enterprise agreement",
+    "Support ticket #10847 unresolved for 10 days"
+  ],
+  "readiness_criteria": {
+    "has_budget_confirmed": true,
+    "has_playbook_match": true,
+    "has_executive_sponsor": false,
+    "has_telemetry_complete": true,
+    "has_remediation_plan": false,
+    "has_contract_alignment": false,
+    "has_csm_alignment": false
+  }
 }

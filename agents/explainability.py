@@ -28,9 +28,9 @@ except ImportError:
 from agents.graph import PulseState
 
 
-def _build_prompt(recommendation: dict, retrieved_evidence: list[dict]) -> str:
+def _build_prompt(recommendation: dict, retrieved_evidence: list[dict], guidance: str = None) -> str:
     """
-    Constructs the LLM prompt from the recommendation and evidence.
+    Constructs the LLM prompt from the recommendation, evidence, and human guidance.
     """
     action = recommendation.get("action", "N/A")
     propensity = recommendation.get("propensity", 0.0)
@@ -81,9 +81,10 @@ Write a 2–4 sentence explanation that:
 3. Briefly references the key signals driving the recommendation (e.g., usage drop, champion departure).
 4. If confidence is below 0.5, includes the phrase "Low confidence — recommend human judgment over automation."
 5. Do NOT re-state basic account profile facts (such as company segment, contract type, contract value, or active user count) that are already visible in the sidebar UI. Focus strictly on the reasoning, evidence citations, and key risk signals.
-
-Do NOT use bullet points. Write in flowing, professional prose. Be direct and concise.
 """
+    if guidance:
+        prompt += f"\n\nNote: The user provided the following guidance override: \"{guidance}\". Integrate this guidance into your explanation and explain how the recommendation was adjusted in response to this human feedback."
+
     return prompt.strip()
 
 
@@ -97,6 +98,8 @@ def explainability_node(state: PulseState) -> dict[str, Any]:
     recommendation = state.get("recommendation", {})
     retrieved_evidence = state.get("retrieved_evidence", [])
     confidence = recommendation.get("confidence", 1.0)
+    customer_profile = state.get("customer_profile", {})
+    guidance = customer_profile.get("guidance_override")
 
     # ---- Attempt Groq LLM call ----
     api_key = os.getenv("GROQ_API_KEY")
@@ -104,7 +107,7 @@ def explainability_node(state: PulseState) -> dict[str, Any]:
     if _groq_available and api_key and api_key != "your_groq_api_key_here":
         try:
             client = Groq(api_key=api_key)
-            prompt = _build_prompt(recommendation, retrieved_evidence)
+            prompt = _build_prompt(recommendation, retrieved_evidence, guidance=guidance)
 
             chat_completion = client.chat.completions.create(
                 messages=[
@@ -134,11 +137,11 @@ def explainability_node(state: PulseState) -> dict[str, Any]:
             print(f"Explainability Agent: Groq call failed ({e}), falling back to rule-based explanation.")
 
     # ---- Rule-based fallback (no API key or Groq unavailable) ----
-    explanation = _rule_based_explanation(recommendation, retrieved_evidence)
+    explanation = _rule_based_explanation(recommendation, retrieved_evidence, guidance=guidance)
     return {"explanation": explanation}
 
 
-def _rule_based_explanation(recommendation: dict, retrieved_evidence: list[dict]) -> str:
+def _rule_based_explanation(recommendation: dict, retrieved_evidence: list[dict], guidance: str = None) -> str:
     """
     Fallback explanation builder using rule-based logic. Used when Groq is unavailable.
     """
@@ -172,5 +175,8 @@ def _rule_based_explanation(recommendation: dict, retrieved_evidence: list[dict]
         parts.append(
             f"This recommendation has a confidence score of {confidence:.2f}, indicating reliable signal strength."
         )
+
+    if guidance:
+        parts.append(f"Adjusted recommendation in response to CSM guidance: \"{guidance}\".")
 
     return " ".join(parts)

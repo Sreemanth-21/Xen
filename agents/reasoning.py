@@ -7,10 +7,45 @@ def reasoning_node(state: PulseState) -> dict[str, Any]:
     print("--- RUNNING REASONING & ARBITRATION AGENT ---")
     
     # 1. Read input state variables
-    customer_profile = state.get("customer_profile", {})
+    customer_profile = dict(state.get("customer_profile", {}))
     retrieved_evidence = state.get("retrieved_evidence", [])
-    assumptions = state.get("assumptions", {})
+    assumptions = dict(state.get("assumptions", {}))
     
+    # Parse natural language guidance override if present
+    guidance = customer_profile.get("guidance_override", "").lower()
+    if guidance:
+        print(f"Applying guidance override: {guidance}")
+        # Parse churn risk override
+        if "high risk" in guidance or "risk to high" in guidance or "churn risk to high" in guidance:
+            customer_profile["churn_risk"] = "High"
+        elif "low risk" in guidance or "risk to low" in guidance or "churn risk to low" in guidance:
+            customer_profile["churn_risk"] = "Low"
+        elif "medium risk" in guidance or "risk to medium" in guidance or "churn risk to medium" in guidance:
+            customer_profile["churn_risk"] = "Medium"
+            
+        # Parse segment override
+        if "enterprise" in guidance:
+            customer_profile["segment"] = "Enterprise"
+        elif "mid-market" in guidance:
+            customer_profile["segment"] = "Mid-Market"
+        elif "smb" in guidance:
+            customer_profile["segment"] = "SMB"
+            
+        # Parse specific action overrides
+        if "upsell" in guidance:
+            customer_profile["_force_action"] = "Propose upsell"
+        elif "retention" in guidance:
+            customer_profile["_force_action"] = "Schedule retention call"
+        elif "recovery" in guidance:
+            customer_profile["_force_action"] = "Launch adoption recovery playbook"
+        elif "check-in" in guidance:
+            customer_profile["_force_action"] = "Schedule check-in and health review"
+            
+        # Clear resolved assumptions when override is applied
+        for key in ["churn_risk", "segment"]:
+            if key in assumptions:
+                del assumptions[key]
+
     churn_risk = customer_profile.get("churn_risk", "Medium")
     print(f"DEBUG REASONING: incoming health_score = {customer_profile.get('health_score')} (type: {type(customer_profile.get('health_score'))})", flush=True)
     try:
@@ -83,7 +118,9 @@ def reasoning_node(state: PulseState) -> dict[str, Any]:
     else:
         utilisation = None
 
-    if churn_risk == "High":
+    if customer_profile.get("_force_action"):
+        action = customer_profile["_force_action"]
+    elif churn_risk == "High":
         action = "Schedule retention call"
     elif churn_risk == "Low" and health_score >= 80:
         if utilisation is not None and utilisation >= 0.90:
@@ -130,8 +167,10 @@ def reasoning_node(state: PulseState) -> dict[str, Any]:
     
     print(f"Computed reasoning - Priority: {priority:.4f}, Confidence: {confidence:.4f}, Action: '{action}'")
     
-    # 9. Return structured recommendation dictionary
+    # 9. Return structured recommendation dictionary, including updated profile/assumptions
     return {
+        "customer_profile": customer_profile,
+        "assumptions": assumptions,
         "recommendation": {
             "action": action,
             "propensity": round(propensity, 4),

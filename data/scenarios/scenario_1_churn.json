@@ -11,5 +11,24 @@
     "active_users": 38,
     "contract_value": 45000
   },
-  "expected_confidence": "high"
+  "expected_confidence": "high",
+  "temporal_velocity": {
+    "current": 35,
+    "30_day_change": -25,
+    "trend": "declining"
+  },
+  "confidence_penalties": [
+    "Executive sponsor restructuring",
+    "Competitor trial in progress",
+    "Persistent unresolved API latency issues"
+  ],
+  "readiness_criteria": {
+    "has_budget_confirmed": true,
+    "has_playbook_match": true,
+    "has_executive_sponsor": false,
+    "has_telemetry_complete": true,
+    "has_remediation_plan": false,
+    "has_contract_alignment": false,
+    "has_csm_alignment": true
+  }
 }

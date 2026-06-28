@@ -12,5 +12,23 @@
     "contract_value": 45000
   },
   "expected_confidence": "high",
-  "demo_note": "Run this AFTER scenario_1_churn to demonstrate the Memory Diff panel — the prior retention call decision will surface here."
+  "demo_note": "Run this AFTER scenario_1_churn to demonstrate the Memory Diff panel — the prior retention call decision will surface here.",
+  "temporal_velocity": {
+    "current": 52,
+    "30_day_change": 17,
+    "trend": "improving"
+  },
+  "confidence_penalties": [
+    "Executive sponsor departed",
+    "Discount expectations unresolved"
+  ],
+  "readiness_criteria": {
+    "has_budget_confirmed": false,
+    "has_playbook_match": true,
+    "has_executive_sponsor": false,
+    "has_telemetry_complete": true,
+    "has_remediation_plan": true,
+    "has_contract_alignment": false,
+    "has_csm_alignment": true
+  }
 }
