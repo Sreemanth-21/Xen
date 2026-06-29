@@ -4,7 +4,7 @@ A LangGraph Multi-Agent Decision-Support Platform for B2B SaaS Customer Success 
 ## Overview
 censtrategist is a Customer Success Manager (CSM) decision-support tool designed for B2B SaaS organizations to prioritize and execute customer-success mitigations. By processing raw CRM transcripts, notes, and emails through a cooperative multi-agent pipeline, the system generates prioritized, explainable next-best-action recommendations. With human-in-the-loop validation, CSMs can inspect underlying assumptions, run what-if simulations, and modify parameters to ensure high-confidence customer retention and expansion.
 
-![XenStrategist System Architecture](docs/architecture_diagram.png)
+<img width="8192" height="5344" alt="image" src="https://github.com/user-attachments/assets/fe17a664-2828-46ee-b9d0-d75946d8d8d4" />
 
 ## How It Works
 The platform relies on a hub-and-spoke LangGraph orchestration model, coordinated by a central planner that routes execution context to specialized spokes and pauses at human checkpoints:
