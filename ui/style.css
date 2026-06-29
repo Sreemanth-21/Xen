@@ -20,6 +20,11 @@ header {
   visibility: hidden !important;
 }
 
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapseButton"] {
+  visibility: visible !important;
+}
+
 /* ── BLOCK CONTAINER — narrowed for centralized pipeline ───────────────── */
 .block-container {
   max-width: 1200px !important;
@@ -399,6 +404,7 @@ div[data-testid="stExpanderDetails"] {
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 4;
+  line-clamp: 4;
   -webkit-box-orient: vertical;
   text-overflow: ellipsis;
   flex: 1;
