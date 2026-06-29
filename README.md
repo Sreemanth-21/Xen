@@ -129,11 +129,9 @@ Follow these steps to set up and run the project locally:
    The dashboard will automatically open in your browser, typically at `http://localhost:8501`.
 
 ## Screenshots
+<img width="1882" height="988" alt="image" src="https://github.com/user-attachments/assets/6d18c851-222b-4130-8a63-a4c90e9681b7" />
+<img width="1716" height="1026" alt="image" src="https://github.com/user-attachments/assets/3b93faeb-0e81-44dc-8764-aaf68b7a4960" />
+<img width="1495" height="1040" alt="image" src="https://github.com/user-attachments/assets/dec0c7b9-433f-4e03-a89b-19cfa4621b8f" />
+<img width="1898" height="1042" alt="image" src="https://github.com/user-attachments/assets/eca84eb4-1d6b-4873-9c37-5dbf4682f104" />
 
-<!-- [SCREENSHOT — insert UI image here] -->
-<!-- [SCREENSHOT — insert UI image here] -->
-<!-- [SCREENSHOT — insert UI image here] -->
 
-## Team
-
-[Add team member names and roles here]
