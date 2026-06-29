@@ -27,7 +27,7 @@ The global state schema driving the orchestration contains the following fields:
 
 Below is the orchestration lifecycle of a case, illustrating the Hub-and-Spoke interactions and the Human-in-the-Loop (HITL) interrupt barrier:
 
-![Xen Orchestration Graph Flow](file:///C:/Users/Sreemanth%20Palakurthi/PROJECTSS/Xen/docs/arch.png)
+![Xen Orchestration Graph Flow](https://github.com/user-attachments/assets/fe17a664-2828-46ee-b9d0-d75946d8d8d4)
 
 ---
 
