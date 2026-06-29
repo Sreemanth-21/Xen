@@ -282,6 +282,10 @@ def _load_scenarios() -> dict:
         gt   = sc.get("ground_truth_assumptions", {})
         risk = gt.get("churn_risk", "Medium")
         label = f"{_RISK_ICONS.get(risk,'⚪')}  {sc['customer_name']} — {risk} Risk"
+        if fname == "scenario_1_churn.json":
+            label += " (Initial)"
+        elif fname == "scenario_4_apexlogistics_followup.json":
+            label += " (Follow-up)"
         result[label] = sc
     return result
 
